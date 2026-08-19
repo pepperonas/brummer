@@ -22,7 +22,19 @@ const ANIM_FRAMES = {
   sniff:   ['sniff'],
   dig:     ['sniff'],
   stunned: ['sleep0'],
+  // Frontale Ansichten (tools/make_front.py): gleiche Bildzahl wie ihre
+  // Profil-Gegenstuecke, damit die Schrittphase unveraendert weiterlaeuft.
+  frontWalk:  ['front0', 'front1', 'front2', 'front3', 'front4'],
+  frontRun:   ['frun0', 'frun1'],
+  frontProwl: ['fprowl0', 'fprowl1', 'fprowl2', 'fprowl3'],
 };
+
+// Welcher Zustand hat eine frontale Fassung?
+const FRONT_SET = { walk: 'frontWalk', run: 'frontRun', prowl: 'frontProwl' };
+// Hysterese: einmal drin, bleibt es laenger -- sonst flackert die Ansicht,
+// wenn man schraeg laeuft und der Wert um die Schwelle pendelt.
+const FRONT_EIN = 0.62;
+const FRONT_AUS = 0.42;
 // Bildrate nur noch fuer Posen OHNE Fortbewegung. Alles, was laeuft, haengt an
 // der zurueckgelegten STRECKE (s. STRIDE) -- eine feste Bildrate loest die Beine
 // vom Boden, sobald das Tempo nicht exakt zum Takt passt ("foot sliding").
@@ -54,6 +66,15 @@ const TURN_RATE = 30;
 // Waehrend des Schwenks wird der Hund nie duenner als das hier -- bei 0 waere
 // er fuer ein Bild komplett verschwunden.
 const TURN_MIN = 0.16;
+
+// --- Tiefenachse ------------------------------------------------------------
+// Es gibt KEINE Front- und Rueckansichten: alle Blaetter sind reines Profil.
+// Statt beim Laufen nach oben/unten stur die Seitenansicht zu zeigen, wird die
+// Silhouette VERKUERZT -- ein Hund, der von dir wegläuft, zeigt eine schmale
+// Front. Zusammen mit der Tiefenskalierung liest sich die Bewegung dadurch als
+// Richtung, obwohl das Bild dasselbe bleibt.
+const FORE_MIN   = 0.42;   // schmalste Silhouette bei senkrechter Bewegung
+const DEPTH_GAIN = 0.06;   // weg = kleiner, her = groesser (+-6 %)
 
 const BARK_DUR = BARK.dur;        // 0,45 s
 const STUN_HIT = 0.30;            // so lange dauert die Trefferreaktion
@@ -190,6 +211,8 @@ export class Renderer {
       st = { ph: 0, lift: 0, squash: 1, rot: 0, dx: 0,
              px: null, py: null, speed: 0, prevSpeed: 0, accel: 0,
              face: null,                       // stufenlose Blickrichtung -1..+1
+             vert: 0, depth: 0, emx: 0, emy: 0,  // Tiefenbewegung (Achsen einzeln gemittelt)
+             frontal: false,                    // zeigt gerade die frontale Fassung
              biteT: -1, wasBite: false, pushed: false,
              barkT: -1, wasBark: false,
              stunT: -1, wasStun: false,
@@ -330,10 +353,33 @@ export class Renderer {
     // --- Tempo aus der TATSAECHLICH gezeichneten Strecke -------------------
     // Nicht aus vx/vy: fremde Figuren werden interpoliert, und die Beine
     // muessen zu dem passen, was auf dem Schirm passiert, nicht zur Physik.
-    let dist = 0;
-    if (st.px !== null) dist = Math.hypot(p.x - st.px, p.y - st.py);
-    if (dist > 70) dist = 0;              // Sprung nach Paketverlust nicht in die Phase geben
+    let dist = 0, mvx = 0, mvy = 0;
+    if (st.px !== null) { mvx = p.x - st.px; mvy = p.y - st.py; dist = Math.hypot(mvx, mvy); }
+    if (dist > 70) { dist = 0; mvx = 0; mvy = 0; }   // Sprung nach Paketverlust ignorieren
     st.px = p.x; st.py = p.y;
+
+    // Wie senkrecht ist die Bewegung? 0 = quer zum Blick, 1 = direkt auf den
+    // Betrachter zu oder von ihm weg.
+    //
+    // ⚠️ NICHT das Verhaeltnis je Bild glaetten. Der eigene Hund wird nur im
+    // Servertakt (30 Hz) fortgeschrieben, gezeichnet wird mit bis zu 144 fps --
+    // auf zwei von drei Bildern ist die Strecke exakt 0. Ein je Bild
+    // ausgerechnetes Verhaeltnis wird dadurch staendig gegen null gezogen:
+    // gemessen kamen bei reiner Senkrechtbewegung 0,28 heraus statt 1,0.
+    // Stattdessen werden die ACHSEN einzeln gemittelt; die Nullbilder treffen
+    // beide gleich und kuerzen sich im Verhaeltnis heraus.
+    const kv = 1 - Math.exp(-7 * dt);
+    const sdt = Math.max(dt, 1e-4);
+    st.emx += (Math.abs(mvx) / sdt - st.emx) * kv;
+    st.emy += (mvy / sdt - st.emy) * kv;                 // mit Vorzeichen
+    const summe = st.emx + Math.abs(st.emy);
+    if (summe > 12) {                                     // in Bewegung
+      st.vert  = Math.abs(st.emy) / summe;
+      st.depth = st.emy / summe;
+    } else {                                              // im Stand ausblenden
+      st.vert  *= 1 - kv;
+      st.depth *= 1 - kv;
+    }
     const roh = dt > 0 ? dist / dt : 0;
     st.speed += (roh - st.speed) * (1 - Math.exp(-14 * dt));
     const kraft = clamp01(st.speed / DOG.run);          // 0 = steht, 1 = Vollgas
@@ -379,7 +425,12 @@ export class Renderer {
     if (!getroffen) st.stunT = -1;
 
     // --- Fortbewegung: Phase folgt der Strecke -----------------------------
-    const list = ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle;
+    // Laeuft der Hund auf den Betrachter zu, gibt es echte frontale Bilder --
+    // sonst stuende beim Laufen nach unten das Seitenbild da.
+    st.frontal = st.depth > (st.frontal ? FRONT_AUS : FRONT_EIN);
+    const frontal = st.frontal && FRONT_SET[p.anim] !== undefined;
+    const list = frontal ? ANIM_FRAMES[FRONT_SET[p.anim]]
+                         : (ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle);
     const stride = STRIDE[p.anim];
     const vorher = st.ph;
     if (stride) st.ph += dist / stride;
@@ -396,7 +447,13 @@ export class Renderer {
         const flug   = Math.max(0, Math.sin((u - 0.5) * 2 * Math.PI));  // 2. Haelfte
         const sammeln = Math.max(0, Math.sin(u * 2 * Math.PI));         // 1. Haelfte
         zLift   = -(5 + 11 * kraft) * flug;
-        zSquash = 1 - 0.11 * kraft * flug + 0.05 * kraft * sammeln;     // strecken / stauchen
+        // ⚠️ Seitlich streckt sich der Koerper in FLUGRICHTUNG, also waagerecht.
+        // Am frontalen Bild zeigt die Flugrichtung in die Tiefe -- dort waere
+        // eine waagerechte Streckung schlicht falsch und macht den Hund breit
+        // und platt. Frontal wird er stattdessen hoeher.
+        zSquash = frontal
+          ? 1 + 0.07 * kraft * flug
+          : 1 - 0.11 * kraft * flug + 0.05 * kraft * sammeln;
         zRot    = (0.05 + 0.055 * kraft) * p.facing;                    // Vorlage ins Tempo
       } else if (p.anim === 'walk') {
         // Vier Fusstritte je Zyklus: zwei Hebungen, dazwischen die
@@ -450,6 +507,15 @@ export class Renderer {
         zDx     = -16 * wurf * p.facing;               // wird zurueckgeworfen
         zLift   = -7 * Math.sin(k * Math.PI) * (1 - k * 0.4);
         zSquash = 1 - 0.13 * wurf;
+      }
+
+      // Die Vorlage zeigt nach VORN auf dem Schirm -- bei senkrechter Bewegung
+      // gibt es kein Vorn, also faellt sie mit der Verkuerzung weg. Der
+      // Auf-und-ab-Anteil wird dafuer kraeftiger: ein Hund, der auf dich
+      // zulaeuft, zeigt mehr Koerperhub als einer, der quer vorbeizieht.
+      if (p.anim === 'run' || p.anim === 'walk' || p.anim === 'prowl') {
+        zRot  *= frontal ? 0 : 1 - st.vert * 0.85;
+        zLift *= 1 + st.vert * 0.45;
       }
 
       // --- Drehung: kleiner Absatz, damit der Schwenk Gewicht bekommt ------
@@ -530,10 +596,17 @@ export class Renderer {
     // Beim Schwenk nie ganz verschwinden lassen: TURN_MIN ist die duennste
     // Silhouette, die noch als Hund lesbar ist.
     const seite = st.face >= 0 ? 1 : -1;
-    const face = seite * Math.max(TURN_MIN, Math.abs(st.face));
+    const gedreht = Math.max(TURN_MIN, Math.abs(st.face));
+    // Verkuerzung der Tiefenbewegung kommt OBENDRAUF -- beides sind Breiten.
+    // ⚠️ Am frontalen Bild darf NICHTS davon wirken: es ist bereits frontal,
+    // Spiegeln waere sinnlos und Stauchen wuerde es ein zweites Mal verkuerzen.
+    const fore = 1 - st.vert * (1 - FORE_MIN);
+    const face = frontal ? 1 : seite * gedreht * fore;
+    // Weg vom Betrachter = kleiner, auf ihn zu = groesser.
+    const scale = 1 + st.depth * DEPTH_GAIN;
 
     return { name, lift: st.lift, squash: st.squash, rot: st.rot, dx: st.dx,
-             air: -st.lift, face, turning: dreht };
+             air: -st.lift, face, scale, turning: dreht, vert: st.vert, depth: st.depth };
   }
 
   drawDog(p, dt) {
@@ -556,7 +629,7 @@ export class Renderer {
 
     this.drawSprite(v.name, p.x, p.y, {
       face: v.face, lift: v.lift, squash: v.squash, rot: v.rot, dx: v.dx,
-      alpha: p.stun > 0 ? 0.82 : 1,
+      scale: v.scale, alpha: p.stun > 0 ? 0.82 : 1,
     });
 
     // Getragener Knochen an der Schnauze

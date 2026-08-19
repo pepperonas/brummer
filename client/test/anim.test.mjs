@@ -433,3 +433,116 @@ test('Graben wirft Erde -- getaktet, nicht gewuerfelt', () => {
   // 4,2 Schuerfer/s, je 2 Krumen -> rund 8 in einer Sekunde
   assert.ok(wuerfe >= 6 && wuerfe <= 12, `${wuerfe} Krumen in einer Sekunde`);
 });
+
+// --- Tiefenachse: Laufen auf den Betrachter zu und von ihm weg --------------
+
+/** Laesst den Hund in eine Richtung laufen und liefert das letzte Bild. */
+function richtung(dx, dy, { anim = 'walk', bilder = 120 } = {}) {
+  const r = renderer();
+  const p = hund({ anim });
+  r.dogVisual(p, 1 / 60);
+  let v = null;
+  for (let i = 0; i < bilder; i++) {
+    p.x += dx; p.y += dy;
+    v = r.dogVisual(p, 1 / 60);
+  }
+  return { v, st: r._animState(p.slot), r, p };
+}
+
+test('Quer laufen bleibt das volle Profil', () => {
+  const { v, st } = richtung(3, 0);
+  assert.equal(st.frontal, false);
+  assert.ok(Math.abs(Math.abs(v.face) - 1) < 0.02, `Silhouette ${v.face}`);
+  assert.ok(Math.abs(v.scale - 1) < 0.01, 'die Groesse haengt an der Tiefe');
+});
+
+test('⚠️ Auf den Betrachter zu erscheint die FRONTALE Fassung', () => {
+  // Vorher stand beim Laufen nach unten dasselbe Seitenbild da -- der Hund lief
+  // sichtbar quer, waehrend er sich senkrecht bewegte.
+  const { v, st } = richtung(0, 3);
+  assert.equal(st.frontal, true, 'bleibt im Profil');
+  assert.match(v.name, /^front\d/, `zeigt ${v.name}`);
+  assert.equal(v.face, 1, 'das frontale Bild wurde gespiegelt oder gestaucht');
+  assert.ok(v.scale > 1.03, `kommt nicht naeher: ${v.scale.toFixed(3)}`);
+});
+
+test('⚠️ Von hinten gibt es KEIN Gesicht', () => {
+  // Es existiert keine Rueckansicht. Das frontale Bild dort zu zeigen waere
+  // grob falsch -- ein weglaufender Hund schaut einen nicht an.
+  const { v, st } = richtung(0, -3);
+  assert.equal(st.frontal, false, 'zeigt das Gesicht beim Weglaufen');
+  assert.doesNotMatch(v.name, /^f(ront|run|prowl)/);
+  assert.ok(v.scale < 0.97, `wird nicht kleiner: ${v.scale.toFixed(3)}`);
+  // stattdessen verkuerzte Silhouette
+  assert.ok(Math.abs(v.face) < 0.5, `nicht verkuerzt: ${v.face.toFixed(2)}`);
+});
+
+test('Diagonal bleibt beim Profil, nur schmaler', () => {
+  const { v, st } = richtung(3, 3);
+  assert.equal(st.frontal, false);
+  assert.ok(Math.abs(v.face) > 0.5 && Math.abs(v.face) < 0.95,
+    `Silhouette ${Math.abs(v.face).toFixed(2)} -- erwartet dazwischen`);
+});
+
+test('Die Ansicht flackert an der Schwelle nicht', () => {
+  // Hysterese: einmal frontal, bleibt es laenger. Ohne sie springt die Ansicht
+  // bei leicht schraegem Lauf mehrmals je Sekunde hin und her.
+  const r = renderer();
+  const p = hund({ anim: 'walk' });
+  r.dogVisual(p, 1 / 60);
+  let wechsel = 0, vorher = null;
+  for (let i = 0; i < 300; i++) {
+    // Richtung pendelt genau um die Schwelle
+    const t = Math.sin(i / 9) * 0.12 + 0.62;
+    p.x += 3 * (1 - t); p.y += 3 * t;
+    const f = r._animState(0).frontal;
+    r.dogVisual(p, 1 / 60);
+    if (vorher !== null && f !== vorher) wechsel++;
+    vorher = f;
+  }
+  assert.ok(wechsel <= 6, `${wechsel} Ansichtswechsel in 5 s -- flackert`);
+});
+
+test('Im Stand faellt die Verkuerzung zurueck', () => {
+  const { r, p } = richtung(0, 3);
+  for (let i = 0; i < 200; i++) r.dogVisual(p, 1 / 60);   // stehen bleiben
+  const st = r._animState(0);
+  assert.ok(st.vert < 0.05, `bleibt verkuerzt stehen: ${st.vert.toFixed(2)}`);
+  assert.ok(Math.abs(st.depth) < 0.05);
+  assert.equal(st.frontal, false);
+});
+
+test('⚠️ Jede frontale Reihe hat so viele Bilder wie ihr Profil-Gegenstueck', () => {
+  // Die Schrittphase ist ein Bruchteil des Zyklus. Haetten die Reihen
+  // verschiedene Laengen, sprangen beim Ansichtswechsel die Beine.
+  const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
+  const liste = (n) => {
+    const m = src.match(new RegExp(`${n}:\\s*\\[([^\\]]*)\\]`));
+    assert.ok(m, `Reihe ${n} nicht gefunden`);
+    return (m[1].match(/'/g) || []).length / 2;
+  };
+  assert.equal(liste('frontWalk'), liste('walk'), 'frontWalk passt nicht zu walk');
+  assert.equal(liste('frontRun'), liste('run'), 'frontRun passt nicht zu run');
+  assert.equal(liste('frontProwl'), liste('prowl'), 'frontProwl passt nicht zu prowl');
+});
+
+test('Alle frontalen Bilder liegen wirklich im Atlas', () => {
+  const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
+  const block = src.slice(src.indexOf('const ANIM_FRAMES'), src.indexOf('const FRONT_SET'));
+  const namen = [...block.matchAll(/'(f(?:ront|run|prowl)\d)'/g)].map((m) => m[1]);
+  assert.ok(namen.length >= 11, `nur ${namen.length} frontale Bilder verdrahtet`);
+  for (const n of namen) {
+    assert.ok(atlas.frames[n], `${n} fehlt im Atlas -- tools/make_front.py + pack_atlas.py laufen lassen`);
+  }
+});
+
+test('Frontale und seitliche Bilder stehen gleich hoch', () => {
+  // Sonst waechst oder schrumpft der Hund beim Richtungswechsel sichtbar.
+  const h = (n) => atlas.frames[n].frame.h;
+  const profil = ['walk0', 'walk1', 'walk2', 'walk3', 'walk4'].map(h);
+  const front = ['front0', 'front1', 'front2', 'front3', 'front4'].map(h);
+  const mp = profil.reduce((a, b) => a + b) / profil.length;
+  const mf = front.reduce((a, b) => a + b) / front.length;
+  assert.ok(Math.abs(mf - mp) / mp < 0.06,
+    `Hoehen weichen ${((mf - mp) / mp * 100).toFixed(0)} % ab (${mp.toFixed(0)} vs ${mf.toFixed(0)})`);
+});

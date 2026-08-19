@@ -276,6 +276,50 @@ Auf schmalen Schirmen (< 620 px) entfaellt das Wort „Arena" vor dem Code — e
 kostet ~50 px, und bei 420 px lief die Kopfzeile sonst 36 px ueber den Rand.
 Geprueft von 380 bis 1920 px: 0 Ueberlauf, 0 Kollisionen.
 
+## Tiefenachse: Laufen nach oben und unten
+
+**Alle fuenf Sprite-Blaetter zeigen den Hund ausschliesslich im PROFIL** — es
+gibt keine Front- und keine Rueckansicht. Beim Laufen nach oben/unten stand
+deshalb dasselbe Seitenbild da: der Hund lief sichtbar quer, waehrend er sich
+senkrecht bewegte.
+
+**Frontale Laufbilder sind jetzt ZUSAMMENGESETZT** (`tools/make_front.py`, 11
+Bilder): vom Profil den rechten Teil (Kopf + Hals) abschneiden, den Rumpf auf
+58 % stauchen — die gestauchten Flanken lesen sich als Brust — und den
+**frontalen Kopf aus dem Emotionsblatt** (`emo_r0c0`) daraufsetzen. Die Beine
+kommen aus dem Profilzyklus und behalten damit ihren Takt. Kein Ersatz fuer
+gezeichnete Frontal-Laufbilder, aber es liest sich als Richtung.
+
+⚠️ **Nur fuer die Bewegung ZUM Betrachter.** Es gibt keine Rueckansicht, und
+ein Gesicht beim Weglaufen waere grob falsch — dort bleibt das gestauchte
+Profil (man sieht ohnehin kein Gesicht). Gepinnt.
+
+⚠️ **Eigene Skala `FRONT` = 0,46** statt `DOG` = 0,50: der aufgesetzte Kopf ragt
+ueber die Schultern, die Bilder sind dadurch 1,09x hoeher. Ohne eigene Skala
+wuechse der Hund beim Richtungswechsel sichtbar.
+
+⚠️ **Jede frontale Reihe hat so viele Bilder wie ihr Profil-Gegenstueck** — die
+Schrittphase ist ein Bruchteil des Zyklus, bei ungleichen Laengen spraengen
+beim Ansichtswechsel die Beine.
+
+⚠️ **Der Galopp streckt sich in FLUGRICHTUNG.** Seitlich ist das waagerecht;
+frontal zeigt die Flugrichtung in die Tiefe, dort macht dieselbe Streckung den
+Hund breit und platt (im Bild nachgeprueft: der springende Hund war ein
+Klumpen). Frontal wird er stattdessen hoeher.
+
+**Zwischen den Ansichten** liegt die verkuerzte Silhouette: `vert` (0 = quer,
+1 = senkrecht) staucht das Profil bis auf `FORE_MIN` = 0,42, `depth` skaliert
++-6 % (weg = kleiner, her = groesser). Umgeschaltet wird mit **Hysterese**
+(ein 0,62 / aus 0,42), sonst springt die Ansicht bei leicht schraegem Lauf
+mehrmals je Sekunde.
+
+⚠️ **Das Verhaeltnis NICHT je Bild ausrechnen.** Der eigene Hund wird nur im
+Servertakt (30 Hz) fortgeschrieben, gezeichnet wird mit bis zu 144 fps — auf
+zwei von drei Bildern ist die Strecke exakt **0**. Ein je Bild gebildetes
+Verhaeltnis wird staendig gegen null gezogen: gemessen kamen bei reiner
+Senkrechtbewegung **0,28** heraus statt 1,0. Stattdessen die ACHSEN einzeln
+mitteln — die Nullbilder treffen beide gleich und kuerzen sich heraus.
+
 ## Grafik
 
 **Die Blätter sind Posen, keine Zyklen.** Gemessen an der Rückenhöhe über der
@@ -302,7 +346,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 64 Tests (Eingabe, Animation, Zeiger, Meta)
+cd client && npm test                                  # 73 Tests (Eingabe, Animation, Zeiger, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -310,8 +354,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**125 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 64 (`input` 13 · `anim` 26 · `pointer` 17 · `meta` 8). Der Client testet mit einem
+**134 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 73 (`input` 13 · `anim` 35 · `pointer` 17 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —
@@ -328,7 +372,9 @@ darüber wurden Drift, Kamera, Ereignisse und das Eingabe-Tor gemessen.
 Grafik neu erzeugen (nur bei Änderungen in `artwork/`, braucht Pillow + ImageMagick):
 
 ```bash
-python3 tools/cut_sprites.py && python3 tools/cut_props.py && python3 tools/pack_atlas.py
+python3 tools/cut_sprites.py && python3 tools/cut_props.py
+python3 tools/make_front.py      # frontale Laufbilder zusammensetzen
+python3 tools/pack_atlas.py
 python3 tools/make_og.py       # Teilbild client/public/og.png (1200x630)
 ```
 
