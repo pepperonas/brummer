@@ -115,6 +115,27 @@ export class Renderer {
     return [(x - this.cam.x) * z + this.vw / 2, (y * SQUASH - this.cam.y * SQUASH) * z + this.vh / 2];
   }
 
+  /** Bildschirmpunkt -> Weltkoordinate. Gegenrechnung zu toScreen. */
+  toWorld(px, py) {
+    const z = this.cam.zoom || 1;
+    return [(px - this.vw / 2) / z + this.cam.x,
+            (py - this.vh / 2) / (z * SQUASH) + this.cam.y];
+  }
+
+  /**
+   * Richtung von (wx,wy) zu einem Bildschirmpunkt, in WELT-Einheiten.
+   * ⚠️ Y muss durch SQUASH zurueckgerechnet werden: auf dem Schirm ist die
+   * Tiefe auf 62 % gestaucht. Ohne das laeuft der Hund bei jedem schraegen
+   * Ziel neben dem Mauszeiger vorbei.
+   */
+  aimDelta(px, py, wx, wy) {
+    const [sx, sy] = this.toScreen(wx, wy);
+    const z = this.cam.zoom || 1;
+    const dx = (px - sx) / z;
+    const dy = (py - sy) / (z * SQUASH);
+    return { dx, dy, dist: Math.hypot(dx, dy) };
+  }
+
   follow(x, y, dt) {
     // resize() MUSS vorher gelaufen sein -- sonst ist vw/vh undefiniert, der
     // Zoom wird NaN und die Klemmung unten macht die Kamera dauerhaft kaputt.
@@ -602,7 +623,16 @@ export class Renderer {
       const k = f.t / f.life;
       const [x, y] = this.toScreen(f.x, f.y);
       const z = this.cam.zoom;
-      if (f.kind === 'dust') {
+      if (f.kind === 'aim') {
+        // Zielmarke der Zeigersteuerung: flacher Ring auf der Bodenebene, also
+        // mit demselben Verhaeltnis gestaucht wie alle anderen Bodenformen.
+        const puls = 0.85 + Math.sin(this.t * 7) * 0.15;
+        ctx.strokeStyle = 'rgba(143,203,164,.75)';
+        ctx.lineWidth = 2 * z;
+        ctx.beginPath(); ctx.ellipse(x, y, 15 * z * puls, 15 * z * 0.42 * puls, 0, 0, 7); ctx.stroke();
+        ctx.strokeStyle = 'rgba(143,203,164,.30)';
+        ctx.beginPath(); ctx.ellipse(x, y, 24 * z, 24 * z * 0.42, 0, 0, 7); ctx.stroke();
+      } else if (f.kind === 'dust') {
         ctx.fillStyle = `rgba(196,180,150,${(1 - k) * 0.5})`;
         ctx.beginPath(); ctx.arc(x, y, f.r * z * (0.6 + k * 1.5), 0, 7); ctx.fill();
       } else if (f.kind === 'bark') {

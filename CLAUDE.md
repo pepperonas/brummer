@@ -241,6 +241,41 @@ gemessen: schon 2 ms reichen). ⚠️ Sprint ist bewusst NICHT dabei (Halten, ke
 Antippen), und die Raste sitzt HINTER dem Textfeld-Tor — sonst beisst jeder
 Leerschlag beim Namentippen.
 
+## Zeigersteuerung und Arena-Code
+
+**Linke Maustaste halten = zum Zeiger laufen** (Diablo-Art), **rechte = beissen**.
+Vorher beiss die linke; das Laufen bekommt sie, weil es die Dauerhandlung ist.
+
+⚠️ **Die Bildschirmrichtung ist NICHT die Weltrichtung.** Die Tiefe ist auf
+`SQUASH` = 62 % gestaucht, also muss `aimDelta` das Y zurueckrechnen
+(`/(zoom*SQUASH)`), sonst laeuft der Hund bei jedem schraegen Ziel daneben. Live
+gemessen nach dem Fix: **0,06 Grad** mittlere Abweichung zwischen Zielrichtung
+und Fahrtrichtung. ⚠️ Beim Nachmessen NICHT Start- gegen Endpunkt vergleichen --
+die Kamera folgt dem Hund, also wandert der Weltpunkt unter dem festen
+Bildschirmzeiger; so kamen scheinbare 10,9 Grad heraus. Richtung und Bewegung
+im SELBEN Bild vergleichen.
+
+Totzone 24 Welteinheiten plus Rampe bis 34: ohne die Rampe pendelt der Hund um
+den Zielpunkt, weil er jedes Bild ueberschiesst. `main.js` setzt die Richtung je
+Bild neu (`input.setAim`), sonst liefe er einmal los statt zu FOLGEN.
+
+**Arena-Code steht dauerhaft oben links** und kopiert sich beim Antippen. Das
+Menue versprach das schon immer („Deinen eigenen Code siehst du oben links"),
+real blitzte er nur als Toast auf.
+
+⚠️ **`#hud` steht auf `pointer-events: none`**, damit man durch die Anzeige
+hindurch spielen kann. **Jedes bedienbare Element im HUD muss `pointer-events:
+auto` einzeln zurueckholen** — sonst faengt das Canvas den Klick ab und der
+Knopf ist sichtbar, aber tot. Genau das ist mir hier passiert und fiel erst im
+Browser auf (Playwright: „canvas intercepts pointer events"). Gepinnt.
+
+⚠️ Nach dem Klick `blur()`: sonst laege der Fokus auf dem Knopf und die
+Leertaste wuerde ihn erneut ausloesen statt zu beissen.
+
+Auf schmalen Schirmen (< 620 px) entfaellt das Wort „Arena" vor dem Code — es
+kostet ~50 px, und bei 420 px lief die Kopfzeile sonst 36 px ueber den Rand.
+Geprueft von 380 bis 1920 px: 0 Ueberlauf, 0 Kollisionen.
+
 ## Grafik
 
 **Die Blätter sind Posen, keine Zyklen.** Gemessen an der Rückenhöhe über der
@@ -267,7 +302,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 47 Tests (Eingabe, Animation, Meta)
+cd client && npm test                                  # 64 Tests (Eingabe, Animation, Zeiger, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -275,8 +310,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**108 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 47 (`input` 13 · `anim` 26 · `meta` 8). Der Client testet mit einem
+**125 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 64 (`input` 13 · `anim` 26 · `pointer` 17 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —

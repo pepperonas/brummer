@@ -31,6 +31,17 @@ export function isTypingTarget(el) {
  * ⚠️ Sprint ist bewusst NICHT dabei: das ist ein Halten, kein Antippen. Ein
  * gerasteter Sprint waere ein Ein-Bild-Satz nach vorn.
  */
+/**
+ * Zeigersteuerung wie in Diablo: linke Taste HALTEN laesst den Hund zum
+ * Mauszeiger laufen, die rechte beisst.
+ *
+ * ⚠️ Vorher beiss die LINKE Taste. Das Laufen bekommt sie, weil es die
+ * Dauerhandlung ist -- Beissen ist ein Einzelschlag und liegt jetzt rechts
+ * (die Leertaste bleibt selbstverstaendlich).
+ */
+const AIM_DEAD = 24;         // Welteinheiten: naeher dran wird nicht gelaufen
+const AIM_RAMP = 34;         // darueber sanft auf volles Tempo
+
 const TAP_BITS = {
   Space: BTN.BITE,
   KeyE: BTN.BARK,
@@ -46,6 +57,8 @@ export class Input {
     this.stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
     this.touchBtn = { bite: false, bark: false, nose: false, run: false };
     this.tapTouch = 0;             // dasselbe fuer die Bildschirmknoepfe
+    this.mouse = { x: 0, y: 0, held: false, inside: false };
+    this.aim = null;               // Weltrichtung zum Zeiger, je Bild gesetzt
     this.onPause = null;
 
     addEventListener('keydown', e => {
@@ -62,7 +75,7 @@ export class Input {
     // keyup NICHT toren: wer beim Loslassen gerade ins Feld geklickt hat,
     // haette sonst eine Taste, die fuer immer gedrueckt bleibt.
     addEventListener('keyup', e => this.keys.delete(e.code));
-    addEventListener('blur', () => this.keys.clear());
+    addEventListener('blur', () => { this.keys.clear(); this.mouse.held = false; this.mouseBite = false; });
 
     canvas.addEventListener('pointerdown', e => this._down(e), { passive: false });
     canvas.addEventListener('pointermove', e => this._move(e), { passive: false });
@@ -76,28 +89,49 @@ export class Input {
             'KeyQ','KeyE','KeyF','ShiftLeft','ShiftRight'].includes(c);
   }
 
-  // Linke Bildhaelfte = Stick, rechte = Maus-Biss
+  // Maus: links laufen, rechts beissen. Finger: linke Bildhaelfte = Stick.
   _down(e) {
     this.canvas.setPointerCapture?.(e.pointerId);
     const r = this.canvas.getBoundingClientRect();
     const x = e.clientX - r.left, y = e.clientY - r.top;
-    if (e.pointerType === 'mouse') { this.mouseBite = true; return; }
+    if (e.pointerType === 'mouse') {
+      this.mouse.x = x; this.mouse.y = y; this.mouse.inside = true;
+      if (e.button === 2) { this.mouseBite = true; this.tapped |= BTN.BITE; }
+      else if (e.button === 0) this.mouse.held = true;
+      e.preventDefault();
+      return;
+    }
     if (x < r.width * 0.5 && !this.stick.active) {
       this.stick = { active: true, id: e.pointerId, ox: x, oy: y, x, y };
       e.preventDefault();
     }
   }
   _move(e) {
-    if (!this.stick.active || e.pointerId !== this.stick.id) return;
     const r = this.canvas.getBoundingClientRect();
+    if (e.pointerType === 'mouse') {
+      // Auch ohne gedrueckte Taste mitfuehren: beim ersten Klick muss die
+      // Richtung sofort stimmen, nicht erst nach der ersten Bewegung.
+      this.mouse.x = e.clientX - r.left;
+      this.mouse.y = e.clientY - r.top;
+      this.mouse.inside = true;
+      return;
+    }
+    if (!this.stick.active || e.pointerId !== this.stick.id) return;
     this.stick.x = e.clientX - r.left;
     this.stick.y = e.clientY - r.top;
     e.preventDefault();
   }
   _up(e) {
-    if (e.pointerType === 'mouse') { this.mouseBite = false; return; }
+    if (e.pointerType === 'mouse') {
+      if (e.button === 2) this.mouseBite = false;
+      else if (e.button === 0) this.mouse.held = false;
+      return;
+    }
     if (this.stick.active && e.pointerId === this.stick.id) this.stick.active = false;
   }
+
+  /** Weltrichtung zum Zeiger; main.js setzt sie je Bild aus dem Renderer. */
+  setAim(aim) { this.aim = aim; }
 
   /** -> {dx, dy, btn} */
   read() {
@@ -107,6 +141,15 @@ export class Input {
     if (k.has('KeyD') || k.has('ArrowRight')) dx += 1;
     if (k.has('KeyW') || k.has('ArrowUp'))    dy -= 1;
     if (k.has('KeyS') || k.has('ArrowDown'))  dy += 1;
+
+    // Maus haelt: zum Zeiger laufen. Innerhalb der Totzone stehen bleiben,
+    // darueber sanft auf volles Tempo -- ohne die Rampe pendelt der Hund um
+    // den Zielpunkt, weil er bei jedem Bild ueberschiesst.
+    if (this.mouse.held && this.aim && this.aim.dist > AIM_DEAD) {
+      const m = Math.min(1, (this.aim.dist - AIM_DEAD) / AIM_RAMP);
+      dx = (this.aim.dx / this.aim.dist) * m;
+      dy = (this.aim.dy / this.aim.dist) * m;
+    }
 
     if (this.stick.active) {
       const sx = this.stick.x - this.stick.ox, sy = this.stick.y - this.stick.oy;

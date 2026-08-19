@@ -131,12 +131,24 @@ function loop(ts) {
 
   const players = net.view();
   const me = players.find(p => p.you);
+
+  // Zeigersteuerung: Richtung je Bild neu berechnen, damit der Hund dem Zeiger
+  // FOLGT und nicht nur einmal losläuft.
+  input.setAim(me && renderer && input.mouse.inside
+    ? renderer.aimDelta(input.mouse.x, input.mouse.y, me.x, me.y)
+    : null);
   if (me) renderer.follow(me.x, me.y, dt);
 
   // Staub und Erde kommen aus dem Renderer -- dort liegen Schritt- und
   // Schlagphase, also faellt beides auf den FUSSTRITT bzw. den Schuerfer statt
   // nach Wuerfel. Der alte Wurf hier haing an der Bildrate des Geraets: bei
   // 144 Hz das 2,4-fache eines 60-Hz-Geraets.
+  // Zielmarke: ohne sie sieht man beim Klick-Laufen nicht, wohin der Hund will.
+  if (input.mouse.held && input.mouse.inside && input.aim && input.aim.dist > 24) {
+    const [wx, wy] = renderer.toWorld(input.mouse.x, input.mouse.y);
+    renderer.spawn('aim', wx, wy, { life: 0.001 });   // eine Runde sichtbar
+  }
+
   // Schnueffeln macht Depots sichtbar
   if (me && me.sniff) {
     revealUntil = performance.now() + 300;
@@ -186,6 +198,7 @@ async function play(roomCode) {
       running = true; last = 0; acc = 0;
       checkOrientation();
       requestAnimationFrame(loop);
+      $('#arena-code').textContent = net.room;
       toast('Arena ' + net.room);
     } else if (Date.now() - t0 > 6000) {
       clearInterval(wait);
@@ -220,6 +233,32 @@ async function loadLeaderboard() {
 // ------------------------------------------------------------- Anbindung
 $('#name').value = store.name;
 $('#btn-play').onclick = () => play('');
+// Arena-Code antippen kopiert ihn -- er existiert nur, um ihn weiterzugeben.
+$('#arena').onclick = async (e) => {
+  const el = $('#arena');
+  const code = $('#arena-code').textContent.trim();
+  if (!code || code === '····') return;
+  let ok = false;
+  try { await navigator.clipboard.writeText(code); ok = true; } catch { ok = false; }
+  if (!ok) {
+    // Aelteres Safari/iOS ohne Clipboard-API: ueber ein Hilfsfeld
+    try {
+      const t = document.createElement('textarea');
+      t.value = code; t.setAttribute('readonly', '');
+      t.style.cssText = 'position:fixed;top:-100px;opacity:0';
+      document.body.appendChild(t); t.select();
+      ok = document.execCommand('copy');
+      t.remove();
+    } catch { ok = false; }
+  }
+  toast(ok ? 'Arena-Code ' + code + ' kopiert' : 'Code: ' + code);
+  el.classList.toggle('ok', ok);
+  setTimeout(() => el.classList.remove('ok'), 900);
+  // ⚠️ Fokus abgeben: sonst laege er auf dem Knopf, und die Leertaste wuerde
+  // ihn erneut ausloesen statt zu beissen.
+  el.blur();
+};
+
 $('#btn-join').onclick = () => play(($('#room').value || '').toUpperCase().replace(/[^A-Z2-9]/g, ''));
 $('#room').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-join').click(); });
 $('#name').addEventListener('keydown', e => { if (e.key === 'Enter') $('#btn-play').click(); });

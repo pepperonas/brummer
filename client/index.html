@@ -66,6 +66,10 @@
 <div id="hud" hidden>
   <div class="hud-top">
     <div class="pill" id="timer">3:00</div>
+    <button class="pill code" id="arena" type="button"
+            title="Arena-Code kopieren -- damit kommen Freunde in genau diese Runde">
+      <span>Arena</span><b id="arena-code">····</b>
+    </button>
     <ol id="board" class="board"></ol>
     <button class="pill ghost" id="btn-leave" type="button">Verlassen</button>
   </div>
@@ -117,12 +121,13 @@
         <input id="room" maxlength="4" placeholder="Code" aria-label="Arena-Code">
         <button class="secondary" id="btn-join" type="button">Beitreten</button>
       </div>
-      <p class="hint">Ohne Code landest du in der nächsten offenen Arena. Deinen eigenen Code siehst du oben links, sobald du drin bist.</p>
+      <p class="hint">Ohne Code landest du in der nächsten offenen Arena. Deinen eigenen Code siehst du oben links, sobald du drin bist — antippen kopiert ihn.</p>
     </details>
 
     <div class="keys">
       <h2>Steuerung</h2>
       <ul>
+        <li><b>Maus halten</b> zum Zeiger laufen · <b>rechte Taste</b> beißen</li>
         <li><b>WASD</b> laufen</li>
         <li><b>Shift</b> sprinten</li>
         <li><b>Leertaste</b> beißen</li>

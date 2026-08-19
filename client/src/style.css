@@ -43,6 +43,8 @@ button { cursor: pointer; border: none; background: none; }
 .hud-top {
   position: absolute; top: calc(10px + var(--safe-t)); left: 10px; right: 10px;
   display: flex; gap: 10px; align-items: flex-start;
+  /* Sicherheitsnetz: lieber umbrechen als rechts aus dem Bild laufen. */
+  flex-wrap: wrap;
 }
 .pill {
   background: rgba(19,24,21,.74); border: 1px solid var(--line);
@@ -75,6 +77,28 @@ button { cursor: pointer; border: none; background: none; }
 }
 .meter i { display: block; height: 100%; width: 100%; background: var(--mint); transition: width .12s linear; }
 .meter i.low { background: var(--leather); }
+
+/* Arena-Code: steht dauerhaft oben links, damit man ihn jederzeit weitergeben
+   kann. Vorher blitzte er nur als Toast auf -- das Menue versprach aber schon
+   "Deinen eigenen Code siehst du oben links". */
+.pill.code {
+  display: inline-flex; align-items: center; gap: 8px;
+  font: inherit; color: var(--dim); cursor: pointer;
+  border: 1px solid var(--line);
+  -webkit-tap-highlight-color: transparent;
+  /* ⚠️ Ohne das faengt das Canvas den Klick ab: #hud steht auf
+     pointer-events:none, damit man DURCH die Anzeige hindurch spielen kann.
+     Jedes bedienbare Element im HUD muss es einzeln zurueckholen. */
+  pointer-events: auto;
+}
+.pill.code b {
+  color: var(--mint); font-weight: 800; letter-spacing: .10em;
+  font-variant-numeric: tabular-nums;
+}
+.pill.code:hover { color: var(--text); border-color: var(--mint); }
+.pill.code:active { transform: scale(.96); }
+.pill.code:focus-visible { outline: 2px solid var(--mint); outline-offset: 2px; }
+.pill.code.ok b { color: var(--text); }
 
 .cds { display: flex; gap: 6px; flex-wrap: wrap; }
 .cd {
@@ -193,6 +217,11 @@ input:focus { border-color: var(--mint); outline: none; }
 
 @media (max-width: 620px) {
   .board { min-width: 128px; font-size: 12px; }
+  /* Das Wort "Arena" kostet ~50 px, die auf schmalen Geraeten fehlen: bei
+     420 px lief die Kopfzeile sonst 36 px ueber den rechten Rand. Der Code
+     allein ist eindeutig genug. */
+  .pill.code span { display: none; }
+  .pill.code { padding: 7px 12px; }
   .meter { width: 132px; }
   .cds { display: none; }
   .sheet { padding: 20px; border-radius: 18px; }

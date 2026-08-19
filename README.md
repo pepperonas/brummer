@@ -7,10 +7,10 @@
   <img alt="Codegröße" src="https://img.shields.io/github/languages/code-size/pepperonas/brummer?style=flat-square&labelColor=131815&color=6bb8b0">
 </p>
 <p>
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-108%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-125%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
   <img alt="Node" src="https://img.shields.io/badge/Node-%E2%89%A5%2020-5FA04E?style=flat-square&labelColor=131815&logo=nodedotjs&logoColor=5FA04E">
   <img alt="Abhängigkeiten" src="https://img.shields.io/badge/Laufzeit--Abh%C3%A4ngigkeiten-2%20Server%20%C2%B7%200%20Client-8fcba4?style=flat-square&labelColor=131815">
-  <img alt="Bundle" src="https://img.shields.io/badge/Client-10%2C7%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Bundle" src="https://img.shields.io/badge/Client-11%2C3%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
 </p>
 <p>
   <img alt="Netzcode" src="https://img.shields.io/badge/Netzcode-30%20Hz%20autoritativ-c08b5c?style=flat-square&labelColor=131815">
@@ -36,11 +36,11 @@ Knochen holen, im Maul zur eigenen Hütte tragen, abliefern. Wer gebissen wird,
 verliert ihn auf der Stelle. Drei Minuten pro Runde, die meisten Knochen
 gewinnen.
 
-![Vier Hunde in der Arena: zwei tragen einen Knochen im Maul, im Feld liegen weitere, links und oben die Hütten](docs/arena.png)
+![Arena mit zwei Hunden, verstreuten Knochen und zwei Hütten; oben links Uhr und Arena-Code](docs/arena.png)
 
-<sub>Vier Spieler in einer Runde — die beiden oberen tragen gerade einen Knochen
-nach Hause. Bots füllen freie Plätze, ihre Namen stehen ohne Fettdruck in der
-Tabelle.</sub>
+<sub>Oben links stehen Restzeit und **Arena-Code** — antippen kopiert ihn, damit
+Freunde in genau diese Runde kommen. Bots füllen freie Plätze, ihre Namen stehen
+ohne Fettdruck in der Tabelle.</sub>
 
 ---
 
@@ -79,6 +79,10 @@ und niemand beißt.
 Kein Konto, kein Ladebildschirm: Name eintragen, „Spielen", man steht in der
 Arena. Der Beitritt sucht die nächste offene Runde; wer mit Freunden spielen
 will, klappt den vierstelligen Arena-Code auf.
+
+**Gesteuert wird wahlweise mit Maus oder Tastatur.** Linke Maustaste halten
+lässt den Hund zum Zeiger laufen (wie in Diablo), die rechte beißt; WASD und
+Leertaste tun dasselbe. Auf dem Handy: virtueller Stick links, Knöpfe rechts.
 
 ![Startmenü mit Namensfeld, Steuerungsübersicht und Bestenliste](docs/menue.png)
 
@@ -119,9 +123,9 @@ cd server && npm install && npm start
 # Client mit Hot-Reload (Port 5180, leitet /api und /ws an 4263 weiter)
 cd client && npm install && npm run dev
 
-# Tests (108 gruen, ohne Fremdpakete -- node --test)
+# Tests (125 gruen, ohne Fremdpakete -- node --test)
 cd server && npm test      # 61: Simulation, Spielregeln, Datenhaltung, Vertraege
-cd client && npm test      # 47: Eingabe, Animation, Teilbild und Meta-Angaben
+cd client && npm test      # 64: Eingabe, Animation, Zeigersteuerung, Meta-Angaben
 ```
 
 Die Suiten decken auch die Stellen ab, die in **zwei** Dateien stehen und
@@ -168,8 +172,8 @@ rauscht das schwarze Fell sichtbar.
 
 **Kein Spiel-Framework.** Phaser wiegt ~1,3 MB, gebraucht würde davon der
 Atlas-Loader. Tiefensortierung, 2,5-D-Projektion und Animation sind ohnehin
-selbst geschrieben. Der gesamte Client wiegt **27 kB JavaScript** (10,7 kB gzip)
-plus 7 kB CSS und 170 kB Grafik.
+selbst geschrieben. Der gesamte Client wiegt **29 kB JavaScript** (11,3 kB gzip)
+plus 8 kB CSS und 170 kB Grafik.
 
 ## Lizenz
 
