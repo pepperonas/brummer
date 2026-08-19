@@ -133,12 +133,10 @@ function loop(ts) {
   const me = players.find(p => p.you);
   if (me) renderer.follow(me.x, me.y, dt);
 
-  // Sprint-Staub kommt jetzt aus dem Renderer -- dort liegt die Schrittphase,
-  // also kann der Staub auf den FUSSTRITT fallen statt nach Wuerfel. Der alte
-  // Wurf hier haing an der Bildrate: bei 144 Hz das 2,4-fache eines 60-Hz-Geraets.
-  for (const p of players) {
-    if (p.anim === 'dig' && Math.random() < 0.5) renderer.dust(p.x + p.facing * 40, p.y, 1, 16);
-  }
+  // Staub und Erde kommen aus dem Renderer -- dort liegen Schritt- und
+  // Schlagphase, also faellt beides auf den FUSSTRITT bzw. den Schuerfer statt
+  // nach Wuerfel. Der alte Wurf hier haing an der Bildrate des Geraets: bei
+  // 144 Hz das 2,4-fache eines 60-Hz-Geraets.
   // Schnueffeln macht Depots sichtbar
   if (me && me.sniff) {
     revealUntil = performance.now() + 300;

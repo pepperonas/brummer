@@ -201,6 +201,34 @@ Zyklen/s liess Rate 22 nur 77 % der Sprunghoehe uebrig und schob den Bogen
 38 ms hinter den Bildwechsel. Rate 55 haelt 95 % und 18 ms (unter einem Bild bei
 60 Hz) und glaettet Zustandswechsel weiterhin ueber ~3 Bilder.
 
+**Die Drehung laeuft stufenlos.** `facing` kippt im Modell hart von +1 auf −1;
+der Renderer fuehrt daneben ein eigenes `face` (−1…+1), das per Feder folgt
+(`TURN_RATE` 30, Schwenk gut 100 ms) und dabei durch die Kante geht — das liest
+sich als Pirouette statt als Spiegelfehler. ⚠️ `TURN_MIN` (0,16) verhindert,
+dass der Hund fuer ein Bild voellig verschwindet, und der getragene Knochen
+haengt an `v.face`, nicht an `p.facing` — sonst steht er neben dem Hund,
+waehrend der sich dreht. `drawSprite` nimmt dafuer `face` (stufenlos); `flip`
+bleibt fuer alle anderen Aufrufer.
+
+**Beschleunigung traegt die Koerpersprache.** Wer anzieht, legt sich nach vorn,
+wer bremst, faellt zurueck (`zug` aus der geglaetteten Tempoableitung). Ohne das
+ist das Tempo aus dem Nichts da.
+
+**Die Interaktionen waren Standbilder.** Bellen stand auf EINER festen Zahl fuer
+0,45 s, ein Treffer auf `rot = 0.05`, Graben auf einem symmetrischen Sinus.
+Jetzt: **Bellen** = normierter Stoss-Impuls (Vorstoss + Stauchung + Kopf hoch,
+klingt ab), **Treffer** = Rueckwurf vom Angreifer weg mit Kippen und Aufschlag,
+danach Ablegen, **Graben** = asymmetrischer Schlag (35 % hin, 65 % zurueck —
+ein Sinus liest sich als Zittern, nicht als Arbeit) mit Erde auf jeden
+Schuerfer. **Tragen** sackt unter die neutrale Linie statt nur weniger zu
+schwingen.
+
+⚠️ **Abklingkurven deckeln ihren eigenen Faktor.** `sin(k·π·3,2)·e^(−7k)`
+erreicht als Gipfel nur **0,42** — aus „7 Einheiten Stoss" wurden gemessene 2,4,
+also 3,5 % der Koerperlaenge und praktisch unsichtbar. Solche Huellkurven
+gehoeren auf Gipfel 1 normiert (hier Faktor 2,38). Der Test misst deshalb in
+**Koerperlaengen**, nicht in nackten Einheiten.
+
 **Staub faellt auf den Fusstritt**, nicht nach Wuerfel: der alte Wurf in
 `main.js` (`Math.random() < 0.35` je Bild) haing an der Bildrate — bei 144 Hz
 das 2,4-fache eines 60-Hz-Geraets.
@@ -239,7 +267,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 36 Tests (Eingabe, Animation, Meta)
+cd client && npm test                                  # 47 Tests (Eingabe, Animation, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -247,8 +275,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**97 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 36 (`input` 13 · `anim` 15 · `meta` 8). Der Client testet mit einem
+**108 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 47 (`input` 13 · `anim` 26 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —

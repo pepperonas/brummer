@@ -7,10 +7,10 @@
   <img alt="Codegröße" src="https://img.shields.io/github/languages/code-size/pepperonas/brummer?style=flat-square&labelColor=131815&color=6bb8b0">
 </p>
 <p>
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-97%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-108%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
   <img alt="Node" src="https://img.shields.io/badge/Node-%E2%89%A5%2020-5FA04E?style=flat-square&labelColor=131815&logo=nodedotjs&logoColor=5FA04E">
   <img alt="Abhängigkeiten" src="https://img.shields.io/badge/Laufzeit--Abh%C3%A4ngigkeiten-2%20Server%20%C2%B7%200%20Client-8fcba4?style=flat-square&labelColor=131815">
-  <img alt="Bundle" src="https://img.shields.io/badge/Client-10%2C0%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Bundle" src="https://img.shields.io/badge/Client-10%2C7%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
 </p>
 <p>
   <img alt="Netzcode" src="https://img.shields.io/badge/Netzcode-30%20Hz%20autoritativ-c08b5c?style=flat-square&labelColor=131815">
@@ -119,9 +119,9 @@ cd server && npm install && npm start
 # Client mit Hot-Reload (Port 5180, leitet /api und /ws an 4263 weiter)
 cd client && npm install && npm run dev
 
-# Tests (97 gruen, ohne Fremdpakete -- node --test)
+# Tests (108 gruen, ohne Fremdpakete -- node --test)
 cd server && npm test      # 61: Simulation, Spielregeln, Datenhaltung, Vertraege
-cd client && npm test      # 36: Eingabe, Animation, Teilbild und Meta-Angaben
+cd client && npm test      # 47: Eingabe, Animation, Teilbild und Meta-Angaben
 ```
 
 Die Suiten decken auch die Stellen ab, die in **zwei** Dateien stehen und
@@ -168,7 +168,7 @@ rauscht das schwarze Fell sichtbar.
 
 **Kein Spiel-Framework.** Phaser wiegt ~1,3 MB, gebraucht würde davon der
 Atlas-Loader. Tiefensortierung, 2,5-D-Projektion und Animation sind ohnehin
-selbst geschrieben. Der gesamte Client wiegt **26 kB JavaScript** (10 kB gzip)
+selbst geschrieben. Der gesamte Client wiegt **27 kB JavaScript** (10,7 kB gzip)
 plus 7 kB CSS und 170 kB Grafik.
 
 ## Lizenz

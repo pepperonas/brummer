@@ -2,7 +2,7 @@
 // Bewegung laeuft auf einer Bodenebene. Bildschirm-Y = Welt-Y * SQUASH,
 // Tiefensortierung nach Welt-Y. Das ist das Beat-em-up-Prinzip -- der einzige
 // Aufbau, fuer den diese Zeichnungen ohne neue Kunst ausreichen.
-import { ARENA, DOG, HOUSE, CACHE, SNIFF, BITE, houseFor } from '../../shared/sim.js';
+import { ARENA, DOG, HOUSE, CACHE, SNIFF, BITE, BARK, DIG, houseFor } from '../../shared/sim.js';
 
 export const SQUASH = 0.62;
 const VIS = 0.54;              // Atlas-Pixel -> Welteinheiten
@@ -45,6 +45,18 @@ export const BITE_DUR = BITE.windup + BITE.active;   // 0,26 s -- so lange dauer
 export const BITE_LAND = 0.16;                        // Nachschwingen nach dem Zuschnappen
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+
+// Wie schnell der Hund sich umdreht. Vorher kippte `facing` in EINEM Bild von
+// +1 auf -1 -- ein hartes Spiegelbild, und das bei jedem Richtungswechsel.
+// 30 entspricht ~33 ms Zeitkonstante, der ganze Schwenk dauert gut 100 ms.
+const TURN_RATE = 30;
+// Waehrend des Schwenks wird der Hund nie duenner als das hier -- bei 0 waere
+// er fuer ein Bild komplett verschwunden.
+const TURN_MIN = 0.16;
+
+const BARK_DUR = BARK.dur;        // 0,45 s
+const STUN_HIT = 0.30;            // so lange dauert die Trefferreaktion
 
 export class Renderer {
   constructor(canvas, atlasImg, atlasJson) {
@@ -155,8 +167,12 @@ export class Renderer {
     let st = this.phase.get(slot);
     if (!st) {
       st = { ph: 0, lift: 0, squash: 1, rot: 0, dx: 0,
-             px: null, py: null, speed: 0,
-             biteT: -1, wasBite: false, pushed: false };
+             px: null, py: null, speed: 0, prevSpeed: 0, accel: 0,
+             face: null,                       // stufenlose Blickrichtung -1..+1
+             biteT: -1, wasBite: false, pushed: false,
+             barkT: -1, wasBark: false,
+             stunT: -1, wasStun: false,
+             digPh: 0, digHit: 0 };
       this.phase.set(slot, st);
     }
     return st;
@@ -178,7 +194,10 @@ export class Renderer {
     // System. Wer nach vorn lehnen will, muss den Winkel mit facing
     // multiplizieren -- sonst lehnt der linkslaufende Hund nach hinten.
     if (opt.rot) ctx.rotate(opt.rot);
-    if (opt.flip) ctx.scale(-1, 1);
+    // `face` ist die stufenlose Fassung von `flip`: -1 gespiegelt, +1 normal,
+    // dazwischen der Schwenk. `flip` bleibt fuer alles andere erhalten.
+    if (opt.face !== undefined) ctx.scale(opt.face, 1);
+    else if (opt.flip) ctx.scale(-1, 1);
     if (opt.squash) ctx.scale(1 / opt.squash, opt.squash);
     if (opt.alpha !== undefined) ctx.globalAlpha = opt.alpha;
     ctx.drawImage(this.img, f.frame.x, f.frame.y, f.frame.w, f.frame.h,
@@ -298,6 +317,21 @@ export class Renderer {
     st.speed += (roh - st.speed) * (1 - Math.exp(-14 * dt));
     const kraft = clamp01(st.speed / DOG.run);          // 0 = steht, 1 = Vollgas
 
+    // Beschleunigung: sie traegt die Koerpersprache. Wer anzieht, legt sich
+    // nach vorn; wer bremst, faellt zurueck. Ohne das wirkt jedes Antreten
+    // wie ein Schnitt, weil das Tempo aus dem Nichts da ist.
+    const aRoh = dt > 0 ? (st.speed - st.prevSpeed) / dt : 0;
+    st.prevSpeed = st.speed;
+    st.accel += (aRoh - st.accel) * (1 - Math.exp(-9 * dt));
+    const zug = clamp(st.accel / 900, -1, 1);           // -1 bremst, +1 zieht an
+
+    // --- Drehung: stufenlos statt Spiegelsprung ---------------------------
+    // `face` laeuft weich von +1 nach -1 und geht dabei durch die Kante. Das
+    // liest sich als Pirouette; ein harter Wechsel liest sich als Fehler.
+    if (st.face === null) st.face = p.facing;           // beim Auftauchen sofort richtig
+    st.face += (p.facing - st.face) * (1 - Math.exp(-TURN_RATE * dt));
+    const dreht = 1 - Math.min(1, Math.abs(st.face));   // 0 = steht, 1 = genau quer
+
     // --- Biss: eigener Zeitgeber, an der Flanke gestartet ------------------
     // Der Schnappschuss traegt keinen Biss-Fortschritt (das waere ein Byte je
     // Spieler und Takt). Die Dauer ist aber eine Konstante, also laeuft die
@@ -309,6 +343,19 @@ export class Renderer {
       st.biteT += dt;
       if (st.biteT > BITE_DUR + BITE_LAND) st.biteT = -1;
     }
+
+    // Bellen und Treffer laufen nach demselben Muster: an der Flanke starten,
+    // lokal weiterzaehlen. Beides sind kurze Ereignisse mit fester Dauer.
+    const bellt = p.anim === 'bark';
+    if (bellt && !st.wasBark) st.barkT = 0;
+    st.wasBark = bellt;
+    if (st.barkT >= 0) { st.barkT += dt; if (st.barkT > BARK_DUR) st.barkT = -1; }
+
+    const getroffen = p.anim === 'stunned';
+    if (getroffen && !st.wasStun) { st.stunT = 0; st.digHit = 0; }
+    st.wasStun = getroffen;
+    if (st.stunT >= 0) { st.stunT += dt; if (st.stunT > STUN_HIT) st.stunT = STUN_HIT; }
+    if (!getroffen) st.stunT = -1;
 
     // --- Fortbewegung: Phase folgt der Strecke -----------------------------
     const list = ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle;
@@ -330,20 +377,64 @@ export class Renderer {
         zLift   = -(5 + 11 * kraft) * flug;
         zSquash = 1 - 0.11 * kraft * flug + 0.05 * kraft * sammeln;     // strecken / stauchen
         zRot    = (0.05 + 0.055 * kraft) * p.facing;                    // Vorlage ins Tempo
-      } else if (p.anim === 'walk' || p.anim === 'prowl') {
+      } else if (p.anim === 'walk') {
+        // Vier Fusstritte je Zyklus: zwei Hebungen, dazwischen die
+        // Gewichtsverlagerung als leichtes Nicken.
         const hoch = Math.abs(Math.sin(u * 2 * Math.PI));
-        zLift   = -hoch * (p.anim === 'prowl' ? 2.2 : 3);
+        zLift   = -hoch * 3;
         zSquash = 1 + 0.015 * hoch;
-        zRot    = 0.015 * p.facing;
+        zRot    = (0.015 + 0.05 * zug) * p.facing;
+      } else if (p.anim === 'prowl') {
+        // Mit Knochen im Maul. Das soll SCHWER aussehen: tiefer, breiter,
+        // laenger unten -- nicht bloss ein Gehen mit kleinerem Ausschlag.
+        const hoch = Math.abs(Math.sin(u * 2 * Math.PI));
+        const tief = Math.pow(hoch, 1.6);              // laenger am Boden
+        zLift   = 1.6 - tief * 2.6;                    // Grundhaltung tiefer
+        zSquash = 0.975 + 0.02 * tief;                 // gedrungen
+        zRot    = (0.03 + 0.04 * zug) * p.facing;
       } else if (p.anim === 'idle') {
         const a = Math.sin(this.t * 1.9 + p.slot);
         zLift = a * 1.4; zSquash = 1 + a * 0.008;
       } else if (p.anim === 'dig') {
-        zLift = Math.sin(this.t * 26) * 2.5; zRot = Math.sin(this.t * 26) * 0.03;
+        // Scharren: schnell nach unten, langsam zurueck. Ein Sinus ist
+        // symmetrisch und liest sich deshalb als Zittern, nicht als Arbeit.
+        st.digPh += dt * 4.2;                          // 4,2 Schuerfer je Sekunde
+        const d = st.digPh - Math.floor(st.digPh);
+        const schlag = d < 0.35 ? Math.sin(d / 0.35 * Math.PI / 2)     // Abschlag
+                                : Math.cos((d - 0.35) / 0.65 * Math.PI / 2); // Rueckholen
+        zLift   = 5.5 * schlag;                        // Kopf runter
+        zRot    = 0.055 * schlag * p.facing;
+        zSquash = 1 - 0.035 * schlag;
+        zDx     = 3 * schlag * p.facing;
       } else if (p.anim === 'bark') {
-        zSquash = 1.04;
+        // Bellen ist ein Schlag, kein Zustand: Koerper faehrt vor und staucht,
+        // dann federt er zurueck. Vorher stand hier eine einzige feste Zahl
+        // fuer die ganzen 0,45 s -- sichtbar war nichts.
+        // ⚠️ Die Kurve ist auf Gipfel 1 NORMIERT (Faktor 2,38). Ohne das
+        // deckelt die Abklingkurve den eigenen Faktor: sin(k*pi*3,2)*e^(-7k)
+        // erreicht nur 0,42, aus "7 Einheiten Stoss" wurden gemessene 2,4 --
+        // 3,5 % der Koerperlaenge, praktisch unsichtbar.
+        const k = st.barkT >= 0 ? clamp01(st.barkT / BARK_DUR) : 0;
+        const stoss = 2.38 * Math.exp(-k * 7) * Math.sin(k * Math.PI * 3.2);
+        zDx     = 9 * stoss * p.facing;                // ~13 % der Koerperlaenge
+        zSquash = 1 + 0.06 * stoss;
+        zRot    = -0.055 * stoss * p.facing;           // Kopf hoch beim Bellen
+        zLift   = -3 * Math.max(0, stoss);
       } else if (p.anim === 'stunned') {
-        zRot = 0.05;
+        // Treffer: erst geworfen werden, dann liegen bleiben. Der Aufschlag
+        // ist die Belohnung des Angreifers -- er muss zu sehen sein.
+        const k = st.stunT >= 0 ? clamp01(st.stunT / STUN_HIT) : 1;
+        const wurf = 1 - k;
+        zRot    = (0.05 + 0.34 * wurf) * p.facing;     // kippt weg
+        zDx     = -16 * wurf * p.facing;               // wird zurueckgeworfen
+        zLift   = -7 * Math.sin(k * Math.PI) * (1 - k * 0.4);
+        zSquash = 1 - 0.13 * wurf;
+      }
+
+      // --- Drehung: kleiner Absatz, damit der Schwenk Gewicht bekommt ------
+      if (dreht > 0.02) {
+        zLift  -= 3.5 * dreht;
+        zSquash += 0.07 * dreht;      // richtet sich beim Drehen auf
       }
 
       // --- Biss ueberschreibt alles ---------------------------------------
@@ -401,6 +492,13 @@ export class Renderer {
         }
       }
     }
+    // Erde fliegt auf den SCHLAG, nicht nach Wuerfel. Der alte Wurf in main.js
+    // (Math.random() je Bild) haing an der Bildrate des Geraets.
+    if (!this.reduced && p.anim === 'dig' && Math.floor(st.digPh) !== st.digHit) {
+      st.digHit = Math.floor(st.digPh);
+      this.dust(p.x + p.facing * 34, p.y + 2, 2, 18);
+    }
+
     // Abstoss-Staub genau im Moment des Zuschnappens (nicht erst, wenn der
     // Server den Treffer bestaetigt -- das waere eine halbe Netzrunde spaeter).
     if (!this.reduced && st.biteT >= BITE.windup && !st.pushed) {
@@ -408,7 +506,13 @@ export class Renderer {
       this.dust(p.x - p.facing * 20, p.y + 2, 3, 20);
     }
 
-    return { name, lift: st.lift, squash: st.squash, rot: st.rot, dx: st.dx, air: -st.lift };
+    // Beim Schwenk nie ganz verschwinden lassen: TURN_MIN ist die duennste
+    // Silhouette, die noch als Hund lesbar ist.
+    const seite = st.face >= 0 ? 1 : -1;
+    const face = seite * Math.max(TURN_MIN, Math.abs(st.face));
+
+    return { name, lift: st.lift, squash: st.squash, rot: st.rot, dx: st.dx,
+             air: -st.lift, face, turning: dreht };
   }
 
   drawDog(p, dt) {
@@ -430,14 +534,17 @@ export class Renderer {
     ctx.restore();
 
     this.drawSprite(v.name, p.x, p.y, {
-      flip: p.facing < 0, lift: v.lift, squash: v.squash, rot: v.rot, dx: v.dx,
+      face: v.face, lift: v.lift, squash: v.squash, rot: v.rot, dx: v.dx,
       alpha: p.stun > 0 ? 0.82 : 1,
     });
 
     // Getragener Knochen an der Schnauze
     if (p.carrying) {
       const f = this.frame('bone');
-      if (f) this.drawSprite('bone', p.x + p.facing * 52, p.y - 52, { scale: 0.85, dx: v.dx, lift: v.lift });
+      // Der Knochen haengt am Maul, also folgt er dem Schwenk mit -- sonst
+      // steht er neben dem Hund, waehrend der sich dreht.
+      if (f) this.drawSprite('bone', p.x + v.face * 52, p.y - 52,
+                             { scale: 0.85, dx: v.dx, lift: v.lift });
     }
   }
 

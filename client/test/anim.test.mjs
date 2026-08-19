@@ -257,3 +257,179 @@ test('Zwischen zwei Zustaenden gibt es keinen Sprung', () => {
     `Sprung in der Hoehe: ${vorher.lift.toFixed(1)} -> ${nachher.lift.toFixed(1)}`);
   assert.ok(Math.abs(nachher.rot - vorher.rot) < 0.05, 'Sprung in der Drehung');
 });
+
+// --- Drehung ----------------------------------------------------------------
+
+/** Laesst den Hund die Richtung wechseln und liefert die Bilder. */
+function drehen(dt = 1 / 120, bilder = 40) {
+  const r = renderer();
+  const p = hund({ anim: 'walk', facing: 1 });
+  for (let i = 0; i < 5; i++) { p.x += 1; r.dogVisual(p, dt); }
+  p.facing = -1;
+  const out = [];
+  for (let i = 0; i < bilder; i++) { p.x -= 1; out.push(r.dogVisual(p, dt)); }
+  return out;
+}
+
+test('Die Drehung laeuft STUFENLOS durch, statt zu spiegeln', () => {
+  const b = drehen();
+  // Es muss Bilder geben, in denen der Hund weder ganz links noch ganz rechts
+  // schaut -- vorher sprang facing in EINEM Bild von +1 auf -1.
+  const dazwischen = b.filter((f) => Math.abs(f.face) < 0.8);
+  assert.ok(dazwischen.length >= 3, `nur ${dazwischen.length} Bilder im Schwenk`);
+});
+
+test('Beim Schwenk verschwindet der Hund nie ganz', () => {
+  for (const f of drehen()) {
+    assert.ok(Math.abs(f.face) >= 0.15, `Silhouette auf ${f.face.toFixed(3)} geschrumpft`);
+    assert.ok(Number.isFinite(f.face));
+  }
+});
+
+test('Die Drehung ist nach gut einem Zehntel abgeschlossen', () => {
+  const b = drehen(1 / 120, 40);        // 40 Bilder = 1/3 s
+  assert.ok(b.at(-1).face < -0.95, `steht nach 333 ms erst bei ${b.at(-1).face.toFixed(2)}`);
+  const nachDrittel = b[12];            // ~100 ms
+  assert.ok(nachDrittel.face < 0, 'nach 100 ms noch nicht ueber die Kante');
+});
+
+test('Wer geradeaus laeuft, dreht sich nicht', () => {
+  const r = renderer();
+  const p = hund({ anim: 'walk', facing: 1 });
+  for (let i = 0; i < 30; i++) { p.x += 2; r.dogVisual(p, 1 / 60); }
+  const f = r.dogVisual(p, 1 / 60);
+  assert.ok(f.face > 0.99, `Blickrichtung driftet: ${f.face}`);
+  assert.ok(f.turning < 0.02);
+});
+
+// --- Tragen ------------------------------------------------------------------
+
+test('Mit Knochen im Maul sackt der Hund UNTER die neutrale Linie', () => {
+  // ⚠️ Der erste Anlauf verglich nur die mittlere Hoehe. Das erfuellt auch
+  // ein blosses Gehen mit kleinerer Schwingung -- die Mutation "prowl = walk
+  // mit weniger Ausschlag" blieb gruen. Die Last zeigt sich daran, dass die
+  // Grundhaltung SINKT (lift > 0 heisst nach unten), nicht daran, dass weniger
+  // gehuepft wird.
+  const gehen = renderer(), tragen = renderer();
+  const a = hund({ anim: 'walk' }), b = hund({ anim: 'prowl' });
+  gehen.dogVisual(a, 1 / 60); tragen.dogVisual(b, 1 / 60);
+  const lGehen = [], lTragen = [];
+  for (let i = 0; i < 180; i++) {
+    a.x += 2; b.x += 2;
+    lGehen.push(gehen.dogVisual(a, 1 / 60).lift);
+    lTragen.push(tragen.dogVisual(b, 1 / 60).lift);
+  }
+  assert.ok(Math.max(...lTragen) > 0.8,
+    `Grundhaltung sinkt nicht: tiefster Punkt ${Math.max(...lTragen).toFixed(2)}`);
+  assert.ok(Math.max(...lGehen) < 0.2, 'das Gehen sackt ploetzlich auch ab');
+
+  const mittelT = lTragen.reduce((x, y) => x + y) / lTragen.length;
+  const mittelG = lGehen.reduce((x, y) => x + y) / lGehen.length;
+  assert.ok(mittelT > mittelG, 'Tragen haengt im Mittel nicht tiefer');
+});
+
+// --- Bellen ------------------------------------------------------------------
+
+test('Bellen ist ein Stoss, kein Standbild', () => {
+  const r = renderer();
+  const p = hund({ anim: 'walk' });
+  r.dogVisual(p, 1 / 240);
+  p.anim = 'bark';
+  const b = [];
+  for (let i = 0; i < 100; i++) b.push(r.dogVisual(p, 1 / 240));
+  const dx = b.map((f) => f.dx);
+  // ⚠️ Untergrenze in KOERPERLAENGEN, nicht in nackten Einheiten: die erste
+  // Fassung erreichte nur 2,4 Einheiten (3,5 % des 68 Einheiten langen Hundes),
+  // weil die Abklingkurve den eigenen Faktor deckelte -- der Stoss war da,
+  // aber unsichtbar.
+  const stoss = Math.max(...dx);
+  assert.ok(stoss / 68 > 0.07,
+    `Stoss nur ${(stoss / 68 * 100).toFixed(1)} % der Koerperlaenge -- unsichtbar`);
+  // und er klingt ab, statt stehen zu bleiben
+  const spaet = Math.max(...dx.slice(70).map(Math.abs));
+  assert.ok(spaet < stoss * 0.6, 'der Stoss klingt nicht ab');
+});
+
+test('Bellen spiegelt sich mit der Blickrichtung', () => {
+  const mach = (facing) => {
+    const r = renderer();
+    const p = hund({ anim: 'walk', facing });
+    r.dogVisual(p, 1 / 240);
+    p.anim = 'bark';
+    const o = [];
+    for (let i = 0; i < 60; i++) o.push(r.dogVisual(p, 1 / 240));
+    return o;
+  };
+  const re = mach(1), li = mach(-1);
+  for (let i = 0; i < re.length; i++) {
+    assert.ok(Math.abs(re[i].dx + li[i].dx) < 1e-9, `dx nicht gespiegelt bei ${i}`);
+  }
+});
+
+// --- Treffer -----------------------------------------------------------------
+
+test('Ein Treffer wirft den Hund zurueck und legt ihn dann ab', () => {
+  const r = renderer();
+  const p = hund({ anim: 'walk' });
+  r.dogVisual(p, 1 / 240);
+  p.anim = 'stunned';
+  const b = [];
+  for (let i = 0; i < 200; i++) b.push(r.dogVisual(p, 1 / 240));
+
+  const frueh = b.slice(0, 40), spaet = b.slice(150);
+  const wurf = Math.min(...frueh.map((f) => f.dx));
+  assert.ok(wurf < -4, `kein Rueckwurf: ${wurf.toFixed(1)}`);
+  assert.ok(Math.max(...frueh.map((f) => f.rot)) > 0.15, 'kippt beim Treffer nicht weg');
+
+  // danach zur Ruhe kommen
+  assert.ok(Math.abs(spaet.at(-1).dx) < 1.5, `bleibt verschoben liegen: ${spaet.at(-1).dx.toFixed(2)}`);
+});
+
+test('Der Rueckwurf zeigt vom Angreifer weg -- auch spiegelverkehrt', () => {
+  const mach = (facing) => {
+    const r = renderer();
+    const p = hund({ anim: 'walk', facing });
+    r.dogVisual(p, 1 / 240);
+    p.anim = 'stunned';
+    const o = [];
+    for (let i = 0; i < 40; i++) o.push(r.dogVisual(p, 1 / 240));
+    return o;
+  };
+  const re = mach(1), li = mach(-1);
+  assert.ok(Math.min(...re.map((f) => f.dx)) < -4, 'nach rechts blickend kein Rueckwurf');
+  assert.ok(Math.max(...li.map((f) => f.dx)) > 4, 'nach links blickend kein Rueckwurf');
+});
+
+// --- Graben ------------------------------------------------------------------
+
+test('Graben schlaegt schnell zu und holt langsam zurueck', () => {
+  const r = renderer();
+  const p = hund({ anim: 'dig' });
+  r.dogVisual(p, 1 / 240);
+  const lift = [];
+  for (let i = 0; i < 240; i++) lift.push(r.dogVisual(p, 1 / 240).lift);
+  const max = Math.max(...lift);
+  assert.ok(max > 3, `kaum Ausschlag: ${max.toFixed(1)}`);
+
+  // Asymmetrie heisst: der Gipfel liegt FRUEH im Zyklus -- kurz hin, lang
+  // zurueck. Ein Sinus haette ihn genau in der Mitte und laese sich als
+  // Zittern statt als Arbeit.
+  // ⚠️ Der erste Anlauf mass hier den Anteil ueber der halben Hoehe. Das ist
+  // das Tastverhaeltnis, nicht die Asymmetrie -- der Test war falsch, nicht
+  // die Kurve.
+  const einZyklus = lift.slice(0, Math.round(240 / 4.2));      // 4,2 Schuerfer/s
+  const gipfel = einZyklus.indexOf(Math.max(...einZyklus)) / einZyklus.length;
+  assert.ok(gipfel < 0.45,
+    `Gipfel liegt bei ${(gipfel * 100).toFixed(0)} % des Zyklus -- zu spaet fuer einen Schlag`);
+});
+
+test('Graben wirft Erde -- getaktet, nicht gewuerfelt', () => {
+  const r = renderer();
+  const p = hund({ anim: 'dig' });
+  r.dogVisual(p, 1 / 240);
+  r.fx.length = 0;
+  for (let i = 0; i < 240; i++) r.dogVisual(p, 1 / 240);   // eine Sekunde
+  const wuerfe = r.fx.filter((f) => f.kind === 'dust').length;
+  // 4,2 Schuerfer/s, je 2 Krumen -> rund 8 in einer Sekunde
+  assert.ok(wuerfe >= 6 && wuerfe <= 12, `${wuerfe} Krumen in einer Sekunde`);
+});
