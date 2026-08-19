@@ -171,7 +171,7 @@ export class Room {
       this.phaseT = ROUND.over;
       const board = [...this.players.values()]
         .sort((a, b) => b.score - a.score)
-        .map(p => ({ id: p.slot, name: p.name, score: p.score, bites: p.bites, bot: !!p.bot }));
+        .map(p => ({ id: p.slot, name: p.name, score: p.score, bites: p.bites, bot: !!p.bot, code: p.code || null }));
       this.push({ e: 'round', phase: 'over', board });
       this.onScore(board);
     } else if (this.phase === 'over' && this.phaseT <= 0) {

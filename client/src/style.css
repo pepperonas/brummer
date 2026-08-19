@@ -200,3 +200,19 @@ input:focus { border-color: var(--mint); outline: none; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* Hochkant auf dem Telefon: die Arena ist 2,45:1 breit, da sieht man quer
+   ein Vielfaches. Nur auf Touchgeraeten -- ein schmales Desktop-Fenster
+   soll niemand zugedeckt bekommen. */
+#rotate {
+  position: fixed; inset: 0; z-index: 50;
+  display: grid; place-items: center; padding: 24px;
+  background: rgba(14,19,16,.94); backdrop-filter: blur(4px);
+}
+.rot-inner {
+  display: flex; flex-direction: column; align-items: center; gap: 14px;
+  text-align: center; max-width: 300px; color: var(--dim);
+}
+.rot-inner svg { color: var(--mint); }
+.rot-inner p { margin: 0; line-height: 1.55; font-size: 15px; }
+.rot-inner b { color: var(--text); font-size: 17px; }

@@ -223,3 +223,31 @@ test('Neue Knochen fallen nie in eine Huette', () => {
     }
   }
 });
+
+test('Die Rundentabelle reicht den Spielercode durch', () => {
+  // Ohne ihn schreibt recordRound nichts und die Bestenliste bleibt leer --
+  // genau das war im ersten Deploy der Fall. Der DB-Test konnte es nicht
+  // sehen, weil er den Code selbst uebergibt; die Luecke lag in der
+  // Verdrahtung zwischen Raum und Datenhaltung.
+  let tabelle = null;
+  const r = new Room('TST', b => { tabelle = b; });
+  const p = r.addHuman('h1', 'A', null);
+  p.code = 'ABC234';
+  p.score = 2;
+  r.phaseT = 0.01;
+  steps(r, 3);
+  assert.ok(tabelle, 'keine Tabelle gemeldet');
+  const mensch = tabelle.find(x => !x.bot);
+  assert.equal(mensch.code, 'ABC234', 'Spielercode fehlt in der Rundentabelle');
+});
+
+test('Bots haben keinen Code und landen so nie in der Wertung', () => {
+  let tabelle = null;
+  const r = new Room('TST', b => { tabelle = b; });
+  r.addHuman('h1', 'A', null); r.balanceBots();
+  r.phaseT = 0.01;
+  steps(r, 3);
+  for (const e of tabelle.filter(x => x.bot)) {
+    assert.ok(!e.code, `Bot ${e.name} traegt einen Spielercode`);
+  }
+});

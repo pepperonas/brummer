@@ -86,9 +86,11 @@ export class Renderer {
     // resize() MUSS vorher gelaufen sein -- sonst ist vw/vh undefiniert, der
     // Zoom wird NaN und die Klemmung unten macht die Kamera dauerhaft kaputt.
     if (!this.vw) this.resize();
-    // Zoom so, dass die Arena moeglichst ganz zu sehen ist, aber nie winzig
-    const fit = Math.min(this.vw / (ARENA.w * 0.86), this.vh / (ARENA.h * SQUASH * 0.95));
-    this.cam.zoom = Math.max(0.34, Math.min(0.9, fit));
+    // Zoom passt die HOEHE, nicht die Breite: die Arena ist 2,45:1, eine
+    // Breiten-Passung liesse auf jedem normalen Bildschirm tote Baender oben
+    // und unten. Horizontal wandert stattdessen die Kamera mit.
+    const fit = this.vh / (ARENA.h * SQUASH);
+    this.cam.zoom = Math.max(0.3, Math.min(1.4, fit));
     const k = this.reduced ? 1 : Math.min(1, dt * 7);
     this.cam.x += (x - this.cam.x) * k;
     this.cam.y += (y - this.cam.y) * k;
@@ -187,20 +189,32 @@ export class Renderer {
     ctx.restore();
   }
 
-  drawHouse(slot, name) {
+  /** Der Hof ist eine Bodenmarkierung -- die liegt IMMER unter allem. */
+  drawHouseYard(slot) {
     const h = houseFor(slot);
     const { ctx } = this;
     const [x, y] = this.toScreen(h.x, h.y);
     const z = this.cam.zoom;
     ctx.save();
     ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    // Hofkreis
     ctx.fillStyle = SLOT_COLORS[slot % 8] + '22';
     ctx.strokeStyle = SLOT_COLORS[slot % 8] + '99';
     ctx.lineWidth = 2.5 * z;
     ctx.setLineDash([9 * z, 7 * z]);
     ctx.beginPath(); ctx.ellipse(x, y, HOUSE.r * z, HOUSE.r * z * SQUASH, 0, 0, 7);
     ctx.fill(); ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  /** Der Baukoerper steht dagegen IM Feld und gehoert in die Tiefensortierung:
+   *  ein Hund dahinter muss dahinter bleiben. */
+  drawHouseBody(slot) {
+    const h = houseFor(slot);
+    const { ctx } = this;
+    const [x, y] = this.toScreen(h.x, h.y);
+    const z = this.cam.zoom;
+    ctx.save();
+    ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     // Huette
     const W = 76 * z, H = 62 * z;
     ctx.fillStyle = '#5d4030';
@@ -378,16 +392,18 @@ export class Renderer {
 
     this.drawGround();
 
-    for (const slot of state.slots) this.drawHouse(slot);
+    for (const slot of state.slots) this.drawHouseYard(slot);
     for (const c of state.caches) this.drawCache(c, state.revealed);
 
     // Tiefensortierung: was weiter hinten steht (kleineres y), wird zuerst gemalt
     const things = [];
     for (const b of state.bones) if (b.by < 0) things.push({ y: b.y, kind: 'bone', o: b });
     for (const p of state.players) things.push({ y: p.y, kind: 'dog', o: p });
+    for (const slot of state.slots) things.push({ y: houseFor(slot).y, kind: 'house', o: slot });
     things.sort((a, b) => a.y - b.y);
     for (const t of things) {
       if (t.kind === 'bone') this.drawBone(t.o);
+      else if (t.kind === 'house') this.drawHouseBody(t.o);
       else this.drawDog(t.o, dt);
     }
     for (const p of state.players) this.drawNameTag(p);

@@ -185,6 +185,7 @@ async function play(roomCode) {
       $('#btn-play').disabled = false;
       $('#btn-play').textContent = 'Spielen';
       running = true; last = 0; acc = 0;
+      checkOrientation();
       requestAnimationFrame(loop);
       toast('Arena ' + net.room);
     } else if (Date.now() - t0 > 6000) {
@@ -203,6 +204,7 @@ function leave() {
   $('#hud').hidden = true;
   $('#over').hidden = true;
   $('#menu').hidden = false;
+  $('#rotate').hidden = true;
   loadLeaderboard();
 }
 
@@ -235,7 +237,13 @@ for (const [id, key] of [['t-bite', 'bite'], ['t-bark', 'bark'], ['t-nose', 'nos
   el.addEventListener('pointerleave', off);
 }
 
-addEventListener('resize', () => renderer && renderer.resize());
+function checkOrientation() {
+  const touch = matchMedia('(pointer: coarse)').matches;
+  const hochkant = innerHeight > innerWidth;
+  $('#rotate').hidden = !(touch && hochkant && running);
+}
+addEventListener('resize', () => { renderer && renderer.resize(); checkOrientation(); });
+addEventListener('orientationchange', () => setTimeout(checkOrientation, 120));
 loadLeaderboard();
 
 // Debug-Zugang: erlaubt Messungen im laufenden Spiel (Browser-Tests nutzen ihn).

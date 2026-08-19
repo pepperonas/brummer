@@ -131,6 +131,9 @@ wss.on('connection', ws => {
       if (!p) return send(ws, { t: 'err', msg: 'Arena ist voll' });
       room.balanceBots();
       const acct = ensurePlayer(m.code, name);
+      // Der Code MUSS am Spieler haengen: die Rundentabelle wird spaeter aus
+      // room.players gebaut, und ohne Code schreibt recordRound nichts.
+      p.code = acct.code;
       codeOf.set(ws, { room, id, code: acct.code });
       send(ws, { t: 'hello', you: p.slot, room: room.code, code: acct.code, tickHz: TICK_HZ });
       send(ws, room.meta());
