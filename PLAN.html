@@ -1,0 +1,912 @@
+<title>Beißfest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500;600&family=Instrument+Sans:wght@400;500;600&display=swap">
+
+<style>
+  /* ---------- Tokens: light is the base set ---------- */
+  :root {
+    --ground:      #EFF2EC;
+    --surface:     #FBFCF9;
+    --surface-2:   #E5EADF;
+    --line:        #CBD3C6;
+    --line-soft:   #DDE3D8;
+
+    --text:        #1B211D;
+    --text-dim:    #4E574F;
+    --text-faint:  #6E786F;
+
+    --accent:      #2E7A52;   /* mint of the sprite sheet, darkened for paper */
+    --accent-soft: #D6EADD;
+    --accent-line: #96C2A8;
+
+    --leather:     #8A5A33;   /* Tysons Lederhalsband */
+    --rope:        #2F7A74;   /* das Tau-Halsband */
+    --bone:        #A98F55;
+
+    --shadow: 0 1px 2px rgb(27 33 29 / .06), 0 8px 24px -12px rgb(27 33 29 / .18);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --ground:      #131815;
+      --surface:     #1B211E;
+      --surface-2:   #232B27;
+      --line:        #333D37;
+      --line-soft:   #28312C;
+
+      --text:        #E8EEE9;
+      --text-dim:    #A7B2A9;
+      --text-faint:  #7E8A80;
+
+      --accent:      #8FCBA4;
+      --accent-soft: #1E2C24;
+      --accent-line: #3B5A47;
+
+      --leather:     #C08B5C;
+      --rope:        #6BB8B0;
+      --bone:        #D8C48A;
+
+      --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 12px 32px -14px rgb(0 0 0 / .6);
+    }
+  }
+
+  :root[data-theme="dark"] {
+    --ground:      #131815;
+    --surface:     #1B211E;
+    --surface-2:   #232B27;
+    --line:        #333D37;
+    --line-soft:   #28312C;
+
+    --text:        #E8EEE9;
+    --text-dim:    #A7B2A9;
+    --text-faint:  #7E8A80;
+
+    --accent:      #8FCBA4;
+    --accent-soft: #1E2C24;
+    --accent-line: #3B5A47;
+
+    --leather:     #C08B5C;
+    --rope:        #6BB8B0;
+    --bone:        #D8C48A;
+
+    --shadow: 0 1px 2px rgb(0 0 0 / .3), 0 12px 32px -14px rgb(0 0 0 / .6);
+  }
+
+  /* ---------- Base ---------- */
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--text);
+    font-family: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .page {
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: clamp(2.5rem, 6vw, 5.5rem) clamp(1.15rem, 4vw, 2.5rem) 6rem;
+  }
+
+  /* reading column */
+  .col {
+    max-width: 65ch;
+  }
+
+  h1, h2, h3 {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
+    text-wrap: balance;
+    margin: 0;
+    letter-spacing: -0.02em;
+  }
+
+  p, li { text-wrap: pretty; }
+
+  a {
+    color: var(--accent);
+    text-underline-offset: 3px;
+    text-decoration-thickness: 1px;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+
+  code, .mono {
+    font-family: "IBM Plex Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+
+  code {
+    font-size: .855em;
+    background: var(--surface-2);
+    border: 1px solid var(--line-soft);
+    padding: .1em .38em;
+    border-radius: 4px;
+    color: var(--text);
+    word-break: break-word;
+  }
+
+  .eyebrow {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: .705rem;
+    font-weight: 500;
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    margin: 0;
+  }
+
+  /* ---------- Masthead ---------- */
+  .masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 1.15rem;
+    padding-bottom: 2.4rem;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .masthead h1 {
+    font-size: clamp(2.9rem, 8.5vw, 5rem);
+    line-height: .96;
+    letter-spacing: -0.038em;
+  }
+
+  .masthead h1 .quiet {
+    display: block;
+    font-size: .4em;
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    color: var(--text-dim);
+    margin-top: .55rem;
+  }
+
+  .standfirst {
+    max-width: 58ch;
+    font-size: 1.15rem;
+    line-height: 1.55;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  .meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem .6rem;
+    margin-top: .35rem;
+  }
+
+  .tag {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .715rem;
+    letter-spacing: .05em;
+    padding: .3rem .6rem;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    color: var(--text-dim);
+    background: var(--surface);
+  }
+
+  .tag.is-key {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+    color: var(--accent);
+  }
+
+  /* ---------- Sections ---------- */
+  section {
+    padding-top: clamp(3rem, 6vw, 4.5rem);
+  }
+
+  .sec-head {
+    display: flex;
+    flex-direction: column;
+    gap: .55rem;
+    margin-bottom: 1.6rem;
+  }
+
+  .sec-head h2 {
+    font-size: clamp(1.65rem, 3.6vw, 2.2rem);
+    line-height: 1.12;
+  }
+
+  section p { margin: 0 0 1.05rem; }
+  section p:last-child { margin-bottom: 0; }
+
+  .lede {
+    font-size: 1.06rem;
+    color: var(--text-dim);
+  }
+
+  ul.plain {
+    margin: 0 0 1.1rem;
+    padding-left: 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+  }
+  ul.plain li { padding-left: .2rem; }
+  ul.plain li::marker { color: var(--accent-line); }
+
+  strong { font-weight: 600; color: var(--text); }
+
+  /* ---------- Callout ---------- */
+  .note {
+    display: flex;
+    flex-direction: column;
+    gap: .45rem;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 1rem 1.15rem;
+    margin: 1.5rem 0;
+  }
+  .note .eyebrow { color: var(--accent); }
+  .note p { margin: 0; font-size: .96rem; color: var(--text-dim); }
+
+  .note.warn { border-left-color: var(--leather); }
+  .note.warn .eyebrow { color: var(--leather); }
+
+  /* ---------- Wide blocks ---------- */
+  .wide { max-width: 100%; }
+
+  .scroller {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .93rem;
+    min-width: 720px;
+  }
+
+  thead th {
+    text-align: left;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .69rem;
+    font-weight: 500;
+    letter-spacing: .13em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    padding: .85rem 1rem;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+    background: var(--surface-2);
+  }
+
+  tbody td {
+    padding: .82rem 1rem;
+    border-bottom: 1px solid var(--line-soft);
+    vertical-align: top;
+    color: var(--text-dim);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+
+  tbody td:first-child {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .83rem;
+    color: var(--text);
+    white-space: nowrap;
+  }
+
+  td .grid-badge {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .row-star td { background: var(--accent-soft); }
+  .row-star td:first-child { color: var(--accent); }
+
+  /* ---------- Pose → mechanic mapping ---------- */
+  .mapping {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(268px, 1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: var(--shadow);
+  }
+
+  .map-cell {
+    background: var(--surface);
+    padding: 1.05rem 1.15rem 1.15rem;
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+  }
+
+  .map-pose {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .715rem;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+  }
+
+  .map-pose::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: var(--line);
+  }
+
+  .map-name {
+    font-family: "Bricolage Grotesque", sans-serif;
+    font-weight: 700;
+    font-size: 1.1rem;
+    letter-spacing: -0.015em;
+    color: var(--text);
+  }
+
+  .map-desc {
+    font-size: .9rem;
+    line-height: 1.5;
+    color: var(--text-dim);
+    margin: 0;
+  }
+
+  /* ---------- Phases (a real sequence — numbering earns its place) ---------- */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--surface);
+    box-shadow: var(--shadow);
+  }
+
+  .phase {
+    display: grid;
+    grid-template-columns: 4.6rem 1fr 8.5rem;
+    gap: 0 1.2rem;
+    padding: 1.15rem 1.25rem;
+    border-bottom: 1px solid var(--line-soft);
+    align-items: start;
+  }
+  .phase:last-child { border-bottom: none; }
+
+  .phase-num {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: 1.55rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--accent-line);
+    font-variant-numeric: tabular-nums;
+    padding-top: .15rem;
+  }
+
+  .phase-body h3 {
+    font-size: 1.08rem;
+    font-weight: 700;
+    margin-bottom: .3rem;
+  }
+
+  .phase-body p {
+    margin: 0;
+    font-size: .93rem;
+    color: var(--text-dim);
+  }
+
+  .phase-body .deliv {
+    display: block;
+    margin-top: .45rem;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .78rem;
+    color: var(--text-faint);
+  }
+
+  .phase-cost {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .8rem;
+    color: var(--text-dim);
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    padding-top: .3rem;
+    white-space: nowrap;
+  }
+
+  @media (max-width: 620px) {
+    .phase {
+      grid-template-columns: 3rem 1fr;
+      gap: 0 .9rem;
+    }
+    .phase-num { font-size: 1.25rem; }
+    .phase-cost {
+      grid-column: 2;
+      text-align: left;
+      padding-top: .6rem;
+    }
+  }
+
+  /* ---------- Code block ---------- */
+  pre {
+    margin: 1.2rem 0;
+    padding: 1.05rem 1.15rem;
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow-x: auto;
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .82rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+    font-size: inherit;
+    color: inherit;
+  }
+  pre .c { color: var(--text-faint); }
+  pre .k { color: var(--accent); }
+
+  /* ---------- Decision block ---------- */
+  .options {
+    display: flex;
+    flex-direction: column;
+    gap: .8rem;
+    margin: 1.4rem 0;
+  }
+
+  .opt {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 0 .85rem;
+    align-items: baseline;
+    padding: .95rem 1.1rem;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--surface);
+  }
+
+  .opt.pick {
+    border-color: var(--accent-line);
+    background: var(--accent-soft);
+  }
+
+  .opt-key {
+    font-family: "IBM Plex Mono", monospace;
+    font-size: .74rem;
+    font-weight: 600;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+  .opt.pick .opt-key { color: var(--accent); }
+
+  .opt-text { margin: 0; font-size: .94rem; color: var(--text-dim); }
+  .opt-text b { color: var(--text); font-weight: 600; }
+
+  /* ---------- Footer ---------- */
+  footer {
+    margin-top: 4.5rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid var(--line);
+    font-size: .85rem;
+    color: var(--text-faint);
+    display: flex;
+    flex-wrap: wrap;
+    gap: .4rem 1.4rem;
+    font-family: "IBM Plex Mono", monospace;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+
+<div class="page">
+
+  <header class="masthead">
+    <p class="eyebrow">Konzept &amp; Umsetzungsplan · 19. August 2026</p>
+    <h1>Beißfest<span class="quiet">Ein Online-Arenaspiel aus Tysons Sprite-Blättern</span></h1>
+    <p class="standfirst">Sieben Blätter, rund 80 gezeichnete Posen — und fast jede davon ist bereits eine Spielmechanik. Der Plan nimmt das ernst und baut das Spiel um die Zeichnungen herum, statt Zeichnungen für ein Spiel zu suchen.</p>
+    <div class="meta-row">
+      <span class="tag is-key">2–8 Spieler, Echtzeit</span>
+      <span class="tag">Phaser 3 + TypeScript</span>
+      <span class="tag">Node + ws, autoritativ</span>
+      <span class="tag">tyson.celox.io</span>
+    </div>
+  </header>
+
+  <!-- ============ 1. Bestand ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Bestandsaufnahme</p>
+      <h2>Was tatsächlich da liegt</h2>
+    </div>
+
+    <div class="col">
+      <p class="lede">Acht Dateien, davon sieben verschiedene: <code>lr-sprite-v4</code> und <code>lr-sprite-v5</code> sind byte-identisch (gleiche MD5). Alle Sprite-Blätter liegen auf einem sauberen Raster von <strong>4×4 Zellen à 688×384 px</strong>, getrennt durch 1–2 px dunkle Hilfslinien — das habe ich nachgemessen, nicht geschätzt. Das Zerschneiden ist damit trivial und verlustfrei.</p>
+    </div>
+
+    <div class="wide scroller" style="margin-top:1.6rem">
+      <table>
+        <thead>
+          <tr>
+            <th>Datei</th>
+            <th>Raster</th>
+            <th>Inhalt</th>
+            <th>Rolle im Spiel</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>lr-optimized</td>
+            <td><span class="grid-badge">—</span></td>
+            <td>Charakterblatt „The Labrotties“: Brutus (Nietenhalsband, Narbe) und Buddy (Tan-Abzeichen)</td>
+            <td>Titelbild, Startbildschirm</td>
+          </tr>
+          <tr>
+            <td>lr2-optimized</td>
+            <td><span class="grid-badge">—</span></td>
+            <td>Zwei frontale Sitzportraits, höchste Detailstufe</td>
+            <td>Charakterauswahl</td>
+          </tr>
+          <tr>
+            <td>lr-sprite</td>
+            <td><span class="grid-badge">4×4</span></td>
+            <td>Sitzen frontal · Gehen · Traben · Schlafen</td>
+            <td>Idle, Laufen, AFK</td>
+          </tr>
+          <tr>
+            <td>lr-sprite-v2</td>
+            <td><span class="grid-badge">4×4</span></td>
+            <td>Schleichen · Rennen mit Staubwolke · Sprung · Knochen-Item</td>
+            <td>Sprint, Satz, Aufsammeln</td>
+          </tr>
+          <tr>
+            <td>lr-sprite-v3</td>
+            <td><span class="grid-badge">4×4</span></td>
+            <td>Schnüffeln mit Duftspur · Alarmstand · Buddeln an einer Truhe · 4 Kopfportraits · Angriffssprung</td>
+            <td>Fährte, Buddeln, HUD</td>
+          </tr>
+          <tr class="row-star">
+            <td>lr-sprite-v4 / v5</td>
+            <td><span class="grid-badge">4×4</span></td>
+            <td>Reine Seitenansicht, gemeinsame Grundlinie: Gehen · Rennen · Beißen · Bellen</td>
+            <td>Hauptquelle der Animation</td>
+          </tr>
+          <tr>
+            <td>lr-emo-sprite</td>
+            <td><span class="grid-badge">4×2</span></td>
+            <td>8 Kopfportraits: 4 fröhlich, 4 knurrend mit Sabber</td>
+            <td>HUD-Zustand, Emotes, Abschussmeldung</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="col">
+      <div class="note warn">
+        <p class="eyebrow">Drei ehrliche Einschränkungen</p>
+        <p><strong>Kein Alpha.</strong> Es sind JPEGs auf einem einfarbigen Grund (Minzgrün ≈ <code>#B8DCC4</code>, Charakterblatt hellblau). Freistellen ist echte Arbeit, kein Nebenbei — siehe Pipeline.</p>
+        <p><strong>Es sind Posen, keine Zyklen.</strong> Die vier Bilder einer Reihe sind vier <em>Varianten</em>, nicht vier Phasen einer Laufbewegung. Ohne Zwischenbilder gibt es keine Frame-für-Frame-Animation — dafür gibt es einen Entscheidungspunkt weiter unten.</p>
+        <p><strong>Der spitzohrige Hund ist nicht Tyson.</strong> In v2 und v4 taucht ein dobermannartiges Tier mit Stehohren und Tan-Beinen auf. Als eigener Charakter („der Rivale“) brauchbar, als Tyson-Frame unbrauchbar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 2. Mapping ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Der Kern der Sache</p>
+      <h2>Jede Pose ist schon eine Mechanik</h2>
+    </div>
+
+    <div class="col">
+      <p class="lede">Das ist der Grund, warum dieser Plan so und nicht anders aussieht. Die Blätter enthalten kein zufälliges Posen-Sortiment, sondern eine erstaunlich vollständige Verb-Liste. Ein Hund, der auf einem Bild <em>mit sichtbarer Duftspur schnüffelt</em> und auf einem anderen <em>eine Truhe ausgräbt</em>, verlangt geradezu nach einem Spiel mit Fährten und vergrabenen Depots. Das Spiel wird um die Zeichnungen gebaut — nicht umgekehrt.</p>
+    </div>
+
+    <div class="wide mapping" style="margin-top:1.7rem">
+      <div class="map-cell">
+        <span class="map-pose">Traben, Gehen</span>
+        <span class="map-name">Bewegung</span>
+        <p class="map-desc">Acht Richtungen auf der Bodenebene. Das Sprite bleibt reine Seitenansicht und spiegelt sich je nach Blickrichtung.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Rennen + Staubwolke</span>
+        <span class="map-name">Sprint</span>
+        <p class="map-desc">Ausdauerleiste. Die gezeichnete Staubwolke ist bereits der Partikeleffekt — sie muss nur ausgeschnitten werden.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Sprungpose</span>
+        <span class="map-name">Satz</span>
+        <p class="map-desc">Kurzer Hechtsprung über Hindernisse und aus Bissen heraus. Kostet Ausdauer, kurze Unverwundbarkeit.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Lunge, offenes Maul</span>
+        <span class="map-name">Biss</span>
+        <p class="map-desc">Der Hauptangriff und der Namensgeber. Trifft in einem kurzen Kegel vor der Schnauze: Gegner verliert seinen Knochen und ist 1,5 s betäubt.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Bellen, Knurren</span>
+        <span class="map-name">Bellen</span>
+        <p class="map-desc">Druckwelle im Umkreis: schiebt Gegner weg, unterbricht ihr Buddeln, trifft aber nie einen Knochen. Reines Störwerkzeug.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Schnüffeln + Duftspur</span>
+        <span class="map-name">Fährte</span>
+        <p class="map-desc">Zeigt für zwei Sekunden den nächsten Knochen und jedes vergrabene Depot im Umkreis. Wer schnüffelt, läuft langsam.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Buddeln an der Truhe</span>
+        <span class="map-name">Buddeln</span>
+        <p class="map-desc">Hebt ein Depot mit drei Knochen. Dauert zwei Sekunden, in denen man wehrlos ist — die interessanteste Risikoentscheidung der Runde.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Alarmstand</span>
+        <span class="map-name">Wachsam</span>
+        <p class="map-desc">Ersetzt das Idle, sobald ein Gegner in Sichtweite kommt. Kostenlose Lesbarkeit für alle Mitspieler.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Schlafen mit Z-Z-Z</span>
+        <span class="map-name">Abwesend</span>
+        <p class="map-desc">Inaktive Spieler und die Wartezeit nach dem Betäuben. Das Z-Z-Z ist bereits gezeichnet.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">8 Kopfportraits</span>
+        <span class="map-name">Gesicht</span>
+        <p class="map-desc">Fröhlich beim Abliefern, knurrend beim Beißen. Treibt das HUD, die Abschussmeldungen und sechs Emotes.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Vier Halsbänder</span>
+        <span class="map-name">Skins</span>
+        <p class="map-desc">Leder, Tau, Nieten, Tan-Abzeichen. Vier freie Erscheinungsbilder ohne eine einzige neue Zeichnung.</p>
+      </div>
+      <div class="map-cell">
+        <span class="map-pose">Knochen, Truhe</span>
+        <span class="map-name">Beute</span>
+        <p class="map-desc">Beide Gegenstände sind bereits als Einzelobjekte gezeichnet und lassen sich direkt ausschneiden.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 3. Das Spiel ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Spielkonzept</p>
+      <h2>Knochenjagd in der Arena</h2>
+    </div>
+
+    <div class="col">
+      <p><strong>Der Ablauf.</strong> Zwei bis acht Hunde auf einem umzäunten Platz. In der Mitte fallen laufend Knochen, im Boden liegen vergrabene Depots. Man trägt <em>genau einen</em> Knochen im Maul und bringt ihn zur eigenen Hütte. Wer gebissen wird, verliert ihn auf der Stelle. Drei Minuten, die meisten abgelieferten Knochen gewinnen.</p>
+
+      <p>Die Ein-Knochen-Regel ist die tragende Entscheidung: Sie erzwingt den Weg zurück durch die Arena und macht jeden Träger zum lohnenden Ziel. Ohne sie sammelt jeder in seiner Ecke und niemand beißt.</p>
+
+      <div class="note">
+        <p class="eyebrow">Perspektive — die technisch entscheidende Wahl</p>
+        <p>Alle Laufsprites sind reine <strong>Seitenansicht</strong>. Ein Spiel von oben bräuchte Draufsichten, die es nicht gibt; ein reiner Plattformer bräuchte Level-Tilesets, die es ebenfalls nicht gibt. Die Lösung ist die <strong>2,5-D-Ebene der klassischen Beat-’em-ups</strong>: Bewegung in acht Richtungen auf einem Boden, Sprites bleiben im Profil, Tiefensortierung nach Y. Die Arena braucht dann nur eine Bodentextur, einen Zaun und vier Hütten — alles ohne Charakterkunst herstellbar.</p>
+      </div>
+
+      <p><strong>Warum nicht anders?</strong> Zwei naheliegende Alternativen habe ich verworfen:</p>
+
+      <div class="options">
+        <div class="opt">
+          <span class="opt-key">Verworfen</span>
+          <p class="opt-text"><b>Endlosläufer mit Bestenliste.</b> Am billigsten zu bauen und würde die Renn-Frames gut nutzen — aber „online“ wäre daran nur eine Highscore-Tabelle. Das verfehlt den Wunsch.</p>
+        </div>
+        <div class="opt">
+          <span class="opt-key">Verworfen</span>
+          <p class="opt-text"><b>Rundenbasiertes Duell mit Werte-Karten.</b> Passt hervorragend zu den acht Kopfportraits, lässt aber Rennen, Springen, Buddeln und Schnüffeln ungenutzt liegen — also den Großteil der Zeichnungen.</p>
+        </div>
+        <div class="opt pick">
+          <span class="opt-key">Gewählt</span>
+          <p class="opt-text"><b>Echtzeit-Arena.</b> Nutzt als einzige Variante praktisch jede vorhandene Pose, ist echtes Mehrspieler-Online, hat kurze Runden — und der Serverteil existiert bei dir bereits in erprobter Form.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 4. Pipeline ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Phase 0, das Nadelöhr</p>
+      <h2>Von JPEG zu Spielgrafik</h2>
+    </div>
+
+    <div class="col">
+      <p class="lede">Das ist der Teil, den man unterschätzt. Die Bilder sind schön, aber sie sind Bilder — keine Spielgrafik. Sechs Schritte trennen das eine vom anderen.</p>
+
+      <ul class="plain">
+        <li><strong>Zerschneiden.</strong> 688×384 pro Zelle, die 2 px Hilfslinien wegschneiden. Ein Zehnzeiler mit <code>sharp</code>.</li>
+        <li><strong>Freistellen.</strong> Der Grund ist einfarbig, schwankt durch die JPEG-Kompression aber um ±3 Stufen. Wichtig: <em>Flutfüllung von den Ecken aus</em>, nicht globales Ersetzen einer Farbe — sonst reißt es Löcher in alles im Hund, was zufällig ähnlich hell ist.</li>
+        <li><strong>Säume killen.</strong> JPEG hinterlässt einen grünen Kranz an der Kontur. Entfärben plus 1 px Alpha-Erosion. Wenn das an den Ohren ausfranst: <code>rembg</code> (U²-Net) liefert bessere Kanten als jeder Farbschlüssel.</li>
+        <li><strong>Auf Inhalt beschneiden — aber am Boden ausrichten.</strong> Der häufigste Anfängerfehler: nach Bounding-Box zentrieren. Dann zappelt der Hund beim Animieren. Der Drehpunkt muss die <em>Bodenlinie zwischen den Pfoten</em> sein, pro Frame einzeln notiert.</li>
+        <li><strong>Größen angleichen.</strong> Die Hunde sind von Blatt zu Blatt unterschiedlich groß. v4 ist die Referenz, alles andere wird auf dessen Schulterhöhe skaliert.</li>
+        <li><strong>Atlas packen.</strong> <code>free-tex-packer-cli</code> nach Phaser-3-JSON, in @1x und @2x. Die Quelle ist großzügig — es wird nur verkleinert, nie vergrößert.</li>
+      </ul>
+
+      <pre><code><span class="c"># Zellen schneiden (ImageMagick), Hilfslinien abziehen</span>
+convert lr-sprite-v4-optimized.jpg -crop 688x384 +repage cell_%02d.png
+
+<span class="c"># Freistellen: Flutfüllung von allen vier Ecken, NICHT -transparent</span>
+convert cell_00.png -alpha set -fuzz 10% \
+  -fill none -floodfill +2+2 "#B8DCC4" \
+  -fill none -floodfill +685+2 "#B8DCC4" \
+  -fill none -floodfill +2+381 "#B8DCC4" \
+  -fill none -floodfill +685+381 "#B8DCC4" \
+  -trim +repage frame_00.png</code></pre>
+
+      <div class="note">
+        <p class="eyebrow">Abkürzung, falls möglich</p>
+        <p>Falls die Sitzung existiert, in der die Blätter erzeugt wurden: dieselben Motive <strong>als PNG mit Alphakanal</strong> neu ausgeben zu lassen spart mehrere Stunden Kantenarbeit und liefert ein besseres Ergebnis als jede nachträgliche Freistellung. Das wäre der erste Griff, bevor irgendetwas anderes passiert.</p>
+      </div>
+
+      <h3 style="font-size:1.15rem;margin:2rem 0 .7rem">Der Entscheidungspunkt: Wie bewegt sich das?</h3>
+      <p>Es gibt keine Zwischenbilder. Drei Wege, in aufsteigendem Aufwand:</p>
+
+      <div class="options">
+        <div class="opt pick">
+          <span class="opt-key">Für v1</span>
+          <p class="opt-text"><b>Prozedural.</b> Zwei Posen im Wechsel plus Sinus-Wippen, leichte Rotation und Stauchen beim Aufsetzen. Klingt billig, sieht im Cartoon-Stil aber richtig aus — so lief die halbe Flash-Ära. Kostet einen Nachmittag.</p>
+        </div>
+        <div class="opt">
+          <span class="opt-key">Später</span>
+          <p class="opt-text"><b>Zwischenbilder erzeugen lassen</b>, mit einem vorhandenen Frame als Referenz. Höchste Treue, aber Stilrisiko. Lohnt sich gezielt für den Laufzyklus, nicht für alles.</p>
+        </div>
+        <div class="opt">
+          <span class="opt-key">Nicht empfohlen</span>
+          <p class="opt-text"><b>Ausschneiden und rigging</b> (Spine, DragonBones). Bestes Ergebnis auf dem Papier — aber die Zeichnungen sind nicht auf Trennung angelegt: Beine überlappen den Rumpf, dahinter ist nichts. Man malt mehr, als man spart.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 5. Technik ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Technik</p>
+      <h2>Der Server steht bei dir schon</h2>
+    </div>
+
+    <div class="col">
+      <p class="lede">Der größte Beschleuniger dieses Projekts ist nicht die Kunst, sondern <code>pkmn-battle-server</code>. Dort ist bereits gelöst: WebSocket-Aufstieg hinter nginx, Schnellsuche und Beitritt per Code, Wiederverbindung mit Karenzzeit, ELO, Bestenliste und Wiederholungen aus Seed plus Aktionsprotokoll. Dasselbe Muster, andere Simulation.</p>
+
+      <ul class="plain">
+        <li><strong>Client:</strong> Phaser 3 mit TypeScript und Vite. Bringt Atlas-Laden, Arcade-Physik und Tweens mit — genau die drei Dinge, die man sonst selbst schreibt. Als PWA mit versioniertem Service-Worker-Cache, wie im Haus üblich.</li>
+        <li><strong>Server:</strong> Node mit <code>ws</code>, autoritativ, fester Takt von 30 Hz. Der Client schickt nur Eingaben (<code>{seq, dx, dy, buttons}</code>), niemals Positionen.</li>
+        <li><strong>Netzcode:</strong> Vorhersage für den eigenen Hund mit Abgleich auf jeden Server-Schnappschuss, Interpolation der anderen mit 100 ms Puffer. <strong>Trefferprüfung ausschließlich serverseitig</strong> — ein Kegel vor der Schnauze. Keine Rückrechnung der Latenz in v1: die Arena ist klein, der Biss kurz, der Aufwand stünde in keinem Verhältnis.</li>
+        <li><strong>Datenhaltung:</strong> <code>better-sqlite3</code>, anonyme Sechs-Zeichen-Codes statt Konten — dasselbe Muster wie die Pokémon-Cloud-Sicherung. Wer will, verknüpft später Google.</li>
+        <li><strong>Betrieb:</strong> systemd-Dienst auf dem VPS, nginx-vhost <code>tyson.celox.io</code>, <code>/ws</code> mit <code>proxy_read_timeout 3600s</code>, Zertifikat per certbot mit <code>renew_hook</code>.</li>
+      </ul>
+
+      <div class="note warn">
+        <p class="eyebrow">Zwei Fallen aus deiner eigenen Dokumentation</p>
+        <p><strong>Port vorher prüfen, nicht annehmen.</strong> Bei Deckel war 4251 entgegen der Portliste belegt. Also erst <code>ss -tlnp | grep -oE "127.0.0.1:4[0-9]{4}"</code>, dann entscheiden.</p>
+        <p><strong>nginx auf dem VPS ist 1.24.</strong> Dort gilt <code>listen 443 ssl http2;</code> — das neuere <code>http2 on;</code> gibt es erst ab 1.25 und lässt die Konfiguration platzen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 6. Phasen ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Reihenfolge</p>
+      <h2>Fünf Phasen, jede für sich vorzeigbar</h2>
+    </div>
+
+    <div class="col">
+      <p class="lede">Die Reihenfolge ist nicht beliebig: Phase 1 beantwortet die einzige Frage, an der das Projekt scheitern kann — <em>macht das Beißen überhaupt Spaß?</em> Diese Antwort will man haben, bevor irgendein Netzwerkpaket geschrieben wird.</p>
+    </div>
+
+    <div class="wide phases" style="margin-top:1.7rem">
+      <div class="phase">
+        <span class="phase-num">00</span>
+        <div class="phase-body">
+          <h3>Grafik aufbereiten</h3>
+          <p>Schneiden, freistellen, Drehpunkte auf die Bodenlinie, Größen angleichen, Atlas packen.</p>
+          <span class="deliv">→ atlas.png · atlas.json · sprite-lab.html zum Durchblättern</span>
+        </div>
+        <span class="phase-cost">1–2 Tage</span>
+      </div>
+
+      <div class="phase">
+        <span class="phase-num">01</span>
+        <div class="phase-body">
+          <h3>Örtlicher Prototyp</h3>
+          <p>Ein Hund, eine Arena, Knochen, eine Hütte, ein Trainingsdummy zum Beißen. Kein Server, kein Menü, keine Grafikpolitur. Nur die Frage, ob sich Laufen, Sprinten, Springen und Beißen gut anfühlen.</p>
+          <span class="deliv">→ Spielbar im Browser, örtlich</span>
+        </div>
+        <span class="phase-cost">2–4 Tage</span>
+      </div>
+
+      <div class="phase">
+        <span class="phase-num">02</span>
+        <div class="phase-body">
+          <h3>Online</h3>
+          <p>Autoritativer Server, Räume, Schnellsuche und Beitritt per Code, Vorhersage und Interpolation, Wiederverbindung. Zwei bis acht Spieler in einer echten Runde.</p>
+          <span class="deliv">→ tyson.celox.io, spielbar zu zweit</span>
+        </div>
+        <span class="phase-cost">3–5 Tage</span>
+      </div>
+
+      <div class="phase">
+        <span class="phase-num">03</span>
+        <div class="phase-body">
+          <h3>Drumherum</h3>
+          <p>Bestenliste, ELO, die vier Halsband-Skins, Statistiken, Wiederholungen aus Seed und Aktionsprotokoll.</p>
+          <span class="deliv">→ Gründe, ein zweites Mal zu spielen</span>
+        </div>
+        <span class="phase-cost">2–3 Tage</span>
+      </div>
+
+      <div class="phase">
+        <span class="phase-num">04</span>
+        <div class="phase-body">
+          <h3>Politur</h3>
+          <p>Ton — dein <code>sound-effects</code>-Projekt kann Bellen und Knurren prozedural erzeugen. Dazu Partikel, Emotes aus den acht Kopfportraits und die Touch-Steuerung.</p>
+          <span class="deliv">→ Zeigbar</span>
+        </div>
+        <span class="phase-cost">offen</span>
+      </div>
+    </div>
+
+    <div class="col">
+      <div class="note">
+        <p class="eyebrow">Mobil von Anfang an</p>
+        <p>Bewegung in acht Richtungen braucht auf dem Telefon einen virtuellen Stick plus drei Knöpfe. Das nachzurüsten heißt, die halbe Eingabeschicht neu zu schreiben — also gehört es in Phase 1, auch wenn dort noch niemand mobil spielt.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ 7. Risiken ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Was schiefgehen kann</p>
+      <h2>Die vier ehrlichen Risiken</h2>
+    </div>
+
+    <div class="col">
+      <ul class="plain">
+        <li><strong>Das Freistellen ist das Nadelöhr, nicht das Spiel.</strong> Wenn die Kanten nach dem Schlüsseln fransig sind, zieht sich Phase 0 von zwei Tagen auf eine Woche. Deshalb steht der Versuch, die Motive als PNG mit Alpha neu erzeugen zu lassen, ganz vorne.</li>
+        <li><strong>Die fehlenden Zwischenbilder.</strong> Wenn sich die prozedurale Lösung im Prototyp billig anfühlt, ist das ein Umweg über erzeugte Zwischenbilder — mit Stilrisiko und offenem Zeitbedarf. Diese Frage ist am Ende von Phase 1 beantwortet, nicht vorher.</li>
+        <li><strong>Es fehlt jede Umgebungsgrafik.</strong> Kein Boden, kein Zaun, keine Hütte, kein Menü, keine Bedienelemente. Die 2,5-D-Ebene ist genau deshalb gewählt, weil sie mit sehr wenig davon auskommt — aber „wenig“ ist nicht „nichts“.</li>
+        <li><strong>Echtzeit-Netzcode ist der unangenehmste Teil.</strong> Vorhersage und Abgleich sind fummelig, und Fehler zeigen sich erst bei echter Latenz, nicht auf dem eigenen Rechner. Puffer einplanen und früh über eine gedrosselte Verbindung testen.</li>
+      </ul>
+
+      <p style="margin-top:1.5rem">Was hingegen <em>kein</em> Risiko ist: die Rechte. Es ist dein Hund und deine Grafik, und der Betrieb läuft auf deiner eigenen Maschine.</p>
+    </div>
+  </section>
+
+  <!-- ============ 8. Erster Schritt ============ -->
+  <section>
+    <div class="sec-head col">
+      <p class="eyebrow">Nächster Schritt</p>
+      <h2>Womit es morgen losgeht</h2>
+    </div>
+
+    <div class="col">
+      <p>Der kleinste sinnvolle Anfang ist nicht Phase 0 in ganzer Breite, sondern <strong>ein einziges Blatt</strong>: <code>lr-sprite-v4</code> zerschneiden, sechzehn Frames freistellen, in eine <code>sprite-lab.html</code> laden und mit einem Schieberegler durchblättern. Das dauert eine Stunde und beantwortet sofort die zwei Fragen, an denen der ganze Rest hängt — wie sauber die Kanten werden, und ob sich aus diesen Posen ein Laufen bauen lässt, das man ansehen mag.</p>
+      <p>Fällt die Antwort gut aus, ist der Rest Handwerk.</p>
+    </div>
+  </section>
+
+  <footer>
+    <span>Beißfest — Umsetzungsplan</span>
+    <span>7 Blätter · ~80 Posen · 12 Mechaniken</span>
+    <span>19.08.2026</span>
+  </footer>
+
+</div>

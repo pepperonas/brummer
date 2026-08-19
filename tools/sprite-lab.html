@@ -1,0 +1,120 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Beissfest Sprite-Lab</title>
+<style>
+  body{margin:0;background:#171c19;color:#dfe7e1;font:14px/1.5 ui-monospace,Menlo,monospace}
+  header{padding:12px 18px;border-bottom:1px solid #2b332e;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+  h1{font-size:15px;margin:0;letter-spacing:.12em;text-transform:uppercase;color:#8fcba4}
+  .wrap{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#2b332e}
+  section{background:#1b211e;padding:16px}
+  h2{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#7e8a80;margin:0 0 10px}
+  canvas{background:
+     repeating-conic-gradient(#232b27 0 25%, #1b211e 0 50%) 0 0/16px 16px;
+     border:1px solid #2b332e;display:block;max-width:100%}
+  label{display:inline-flex;gap:6px;align-items:center}
+  input[type=range]{width:120px}
+  button{background:#232b27;color:#dfe7e1;border:1px solid #3b4740;border-radius:6px;padding:5px 10px;font:inherit;cursor:pointer}
+  button.on{background:#8fcba4;color:#11170f;border-color:#8fcba4}
+  .row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .hint{color:#7e8a80;font-size:12px}
+</style>
+<header>
+  <h1>Beissfest · Sprite-Lab</h1>
+  <label>fps <input id="fps" type="range" min="2" max="24" value="10"><span id="fpsv">10</span></label>
+  <label><input id="ground" type="checkbox" checked> Bodenlinie</label>
+  <span class="hint" id="info"></span>
+</header>
+<div class="wrap">
+  <section>
+    <h2>Abspielen</h2>
+    <div class="row" id="anims"></div>
+    <canvas id="play" width="640" height="420"></canvas>
+  </section>
+  <section>
+    <h2>Zwiebelhaut &mdash; alle Frames einer Folge uebereinander</h2>
+    <div class="row" id="anims2"></div>
+    <canvas id="onion" width="640" height="420"></canvas>
+    <p class="hint">Wenn der Ruecken wandert, stimmt das dy im Katalog nicht.</p>
+  </section>
+</div>
+<script>
+const ANIMS = {
+  walk:  ["walk0","walk1","walk2","walk3","walk4"],
+  prowl: ["prowl0","prowl1","prowl2","prowl3"],
+  run:   ["run0","run1"],
+  bite:  ["bite0","bite1"],
+  bark:  ["bark"],
+  sniff: ["sniff"],
+  sleep: ["sleep0","sleep1"],
+  sit:   ["sit"],
+  props: ["bone","face_happy","face_angry"],
+};
+let atlas, data, cur = "walk", cur2 = "walk", t = 0;
+const play = document.getElementById("play"), onion = document.getElementById("onion");
+const pc = play.getContext("2d"), oc = onion.getContext("2d");
+pc.imageSmoothingQuality = oc.imageSmoothingQuality = "high";
+
+function mkButtons(host, get, set) {
+  Object.keys(ANIMS).forEach(k => {
+    const b = document.createElement("button");
+    b.textContent = k;
+    b.onclick = () => { set(k); [...host.children].forEach(c => c.classList.toggle("on", c.textContent === get())); draw(); };
+    host.appendChild(b);
+  });
+  [...host.children].forEach(c => c.classList.toggle("on", c.textContent === get()));
+}
+
+function drawFrame(ctx, name, cx, baseY, alpha) {
+  const f = data.frames[name]; if (!f) return;
+  const dy = (data.meta.beissfest.pivots[name] || {}).dy || 0;
+  ctx.globalAlpha = alpha;
+  ctx.drawImage(atlas, f.frame.x, f.frame.y, f.frame.w, f.frame.h,
+                Math.round(cx - f.frame.w / 2), Math.round(baseY - f.frame.h + dy),
+                f.frame.w, f.frame.h);
+  ctx.globalAlpha = 1;
+}
+
+function grid(ctx, c) {
+  ctx.clearRect(0, 0, c.width, c.height);
+  if (document.getElementById("ground").checked) {
+    ctx.strokeStyle = "#8fcba455"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0, 340.5); ctx.lineTo(c.width, 340.5); ctx.stroke();
+    ctx.strokeStyle = "#8fcba422";
+    ctx.beginPath(); ctx.moveTo(320.5, 0); ctx.lineTo(320.5, c.height); ctx.stroke();
+  }
+}
+
+function draw() {
+  if (!atlas) return;
+  grid(pc, play);
+  const fr = ANIMS[cur];
+  const name = fr[Math.floor(t) % fr.length];
+  drawFrame(pc, name, 320, 340, 1);
+  document.getElementById("info").textContent =
+    `${cur} · ${name} · ${data.frames[name].frame.w}x${data.frames[name].frame.h}`;
+
+  grid(oc, onion);
+  const fr2 = ANIMS[cur2];
+  fr2.forEach((n, i) => drawFrame(oc, n, 320, 340, 0.5 + 0.5 * (i === 0)));
+}
+
+let last = 0;
+function loop(ts) {
+  const fps = +document.getElementById("fps").value;
+  document.getElementById("fpsv").textContent = fps;
+  if (ts - last > 1000 / fps) { t++; last = ts; draw(); }
+  requestAnimationFrame(loop);
+}
+
+(async () => {
+  data = await (await fetch("../client/public/assets/atlas.json")).json();
+  atlas = new Image();
+  atlas.onload = () => {
+    mkButtons(document.getElementById("anims"), () => cur, k => cur = k);
+    mkButtons(document.getElementById("anims2"), () => cur2, k => cur2 = k);
+    document.getElementById("ground").onchange = draw;
+    draw(); requestAnimationFrame(loop);
+  };
+  atlas.src = "../client/public/assets/atlas.png";
+})();
+</script>

@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Beißfest</title>
+<meta name="description" content="Knochenjagd-Arena mit Tyson. Sammeln, tragen, beißen — wer die meisten Knochen heimbringt, gewinnt.">
+<meta name="theme-color" content="#131815">
+<link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="/manifest.webmanifest">
+<meta property="og:title" content="Beißfest">
+<meta property="og:description" content="Knochenjagd-Arena mit Tyson. 2–8 Hunde, drei Minuten, ein Knochen im Maul.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="/src/style.css">
+</head>
+<body>
+<canvas id="game" aria-label="Spielfeld"></canvas>
+
+<!-- Kopfzeile im Spiel -->
+<div id="hud" hidden>
+  <div class="hud-top">
+    <div class="pill" id="timer">3:00</div>
+    <ol id="board" class="board"></ol>
+    <button class="pill ghost" id="btn-leave" type="button">Verlassen</button>
+  </div>
+  <div class="hud-bottom">
+    <div class="meters">
+      <div class="meter" title="Ausdauer"><i id="stam"></i></div>
+      <div class="cds">
+        <span class="cd" id="cd-bite"><b>Leertaste</b>Beißen</span>
+        <span class="cd" id="cd-bark"><b>E</b>Bellen</span>
+        <span class="cd" id="cd-nose"><b>Q</b>Nase</span>
+      </div>
+    </div>
+  </div>
+  <div id="touch" hidden>
+    <button class="tbtn nose" id="t-nose" type="button">Nase</button>
+    <button class="tbtn bark" id="t-bark" type="button">Bellen</button>
+    <button class="tbtn bite" id="t-bite" type="button">Beißen</button>
+    <button class="tbtn run"  id="t-run"  type="button">Sprint</button>
+  </div>
+  <div id="toast"></div>
+</div>
+
+<!-- Menue -->
+<div id="menu">
+  <div class="sheet">
+    <h1>Beiß<span>fest</span></h1>
+    <p class="sub">Knochen holen. Heimbringen. Wer dir in die Quere kommt, wird gebissen.</p>
+
+    <label class="field">
+      <span>Dein Name</span>
+      <input id="name" maxlength="14" placeholder="Tyson" autocomplete="nickname">
+    </label>
+
+    <button class="primary" id="btn-play" type="button">Spielen</button>
+
+    <details class="more">
+      <summary>Mit Freunden spielen</summary>
+      <div class="row">
+        <input id="room" maxlength="4" placeholder="Code" aria-label="Arena-Code">
+        <button class="secondary" id="btn-join" type="button">Beitreten</button>
+      </div>
+      <p class="hint">Ohne Code landest du in der nächsten offenen Arena. Deinen eigenen Code siehst du oben links, sobald du drin bist.</p>
+    </details>
+
+    <div class="keys">
+      <h2>Steuerung</h2>
+      <ul>
+        <li><b>WASD</b> laufen</li>
+        <li><b>Shift</b> sprinten</li>
+        <li><b>Leertaste</b> beißen</li>
+        <li><b>E</b> bellen — drängt weg, unterbricht Graben</li>
+        <li><b>Q</b> Nase — kurz: schnüffeln · halten auf einem Depot: graben</li>
+      </ul>
+    </div>
+
+    <div class="lb">
+      <h2>Bestenliste</h2>
+      <ol id="lb-list"><li class="empty">wird geladen …</li></ol>
+    </div>
+
+    <p class="credit">Die Hunde sind <b>Tyson</b>. Handgeschnittene Sprites, ein Server, kein Konto nötig.</p>
+  </div>
+</div>
+
+<div id="over" hidden>
+  <div class="sheet small">
+    <h2>Runde vorbei</h2>
+    <ol id="over-board" class="finalboard"></ol>
+    <p class="hint" id="over-next">Neue Runde startet gleich …</p>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

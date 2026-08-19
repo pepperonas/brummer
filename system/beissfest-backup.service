@@ -1,0 +1,6 @@
+[Unit]
+Description=Beissfest - Datenbank sichern
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/beissfest-backup.sh

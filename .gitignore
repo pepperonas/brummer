@@ -1,0 +1,14 @@
+node_modules/
+dist/
+build/
+server/public/
+server/data/
+data/
+*.db
+*.db-wal
+*.db-shm
+.DS_Store
+.playwright-mcp/
+*.log
+__pycache__/
+*.pyc
