@@ -29,8 +29,17 @@ const ANIM_FRAMES = {
   frontProwl: ['fprowl0', 'fprowl1', 'fprowl2', 'fprowl3'],
 };
 
-// Welcher Zustand hat eine frontale Fassung?
-const FRONT_SET = { walk: 'frontWalk', run: 'frontRun', prowl: 'frontProwl' };
+/**
+ * Welcher Zustand hat eine frontale Fassung?
+ *
+ * ⚠️ AUS auf Nutzerentscheid (2026-08-19): die zusammengesetzten Frontalbilder
+ * (aufgesetzter Kopf, s. tools/make_front.py) haben nicht ueberzeugt. Die
+ * Bilder bleiben im Atlas und der Generator im Repo -- ein leeres Objekt hier
+ * schaltet sie ab, ein Eintrag wieder an. Ohne sie bleibt es beim VERKUERZTEN
+ * Profil: die Richtung ist weiter ablesbar (Silhouette bis 42 %, Groesse +-6 %),
+ * nur ohne Gesicht von vorn.
+ */
+const FRONT_SET = {};
 // Hysterese: einmal drin, bleibt es laenger -- sonst flackert die Ansicht,
 // wenn man schraeg laeuft und der Wert um die Schwelle pendelt.
 const FRONT_EIN = 0.62;

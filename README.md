@@ -7,7 +7,7 @@
   <img alt="Codegröße" src="https://img.shields.io/github/languages/code-size/pepperonas/brummer?style=flat-square&labelColor=131815&color=6bb8b0">
 </p>
 <p>
-  <img alt="Tests" src="https://img.shields.io/badge/Tests-134%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Tests" src="https://img.shields.io/badge/Tests-135%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
   <img alt="Node" src="https://img.shields.io/badge/Node-%E2%89%A5%2020-5FA04E?style=flat-square&labelColor=131815&logo=nodedotjs&logoColor=5FA04E">
   <img alt="Abhängigkeiten" src="https://img.shields.io/badge/Laufzeit--Abh%C3%A4ngigkeiten-2%20Server%20%C2%B7%200%20Client-8fcba4?style=flat-square&labelColor=131815">
   <img alt="Bundle" src="https://img.shields.io/badge/Client-11%2C3%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
@@ -123,9 +123,9 @@ cd server && npm install && npm start
 # Client mit Hot-Reload (Port 5180, leitet /api und /ws an 4263 weiter)
 cd client && npm install && npm run dev
 
-# Tests (134 gruen, ohne Fremdpakete -- node --test)
+# Tests (135 gruen, ohne Fremdpakete -- node --test)
 cd server && npm test      # 61: Simulation, Spielregeln, Datenhaltung, Vertraege
-cd client && npm test      # 73: Eingabe, Animation, Zeigersteuerung, Meta-Angaben
+cd client && npm test      # 74: Eingabe, Animation, Zeigersteuerung, Meta-Angaben
 ```
 
 Die Suiten decken auch die Stellen ab, die in **zwei** Dateien stehen und
@@ -167,14 +167,17 @@ Kante. Die gezeichneten Bodenschatten überleben das, weil sie die Füllung nich
 erreicht: sie sind **hell und grün-dominant**, während das Fell neutral ist —
 diese Kombination trifft ausschließlich Schatten.
 
-**Es gibt keine Front- und Rückansicht — sie wird zusammengesetzt.** Alle fünf
-Blätter zeigen Tyson im reinen Profil. Beim Laufen nach oben oder unten stand
-deshalb dasselbe Seitenbild da. `tools/make_front.py` baut daraus elf frontale
-Laufbilder: vom Profil den Kopf abschneiden, den Rumpf auf 58 % stauchen (die
-gestauchten Flanken lesen sich als Brust) und den **frontalen Kopf aus dem
-Emotionsblatt** daraufsetzen. Die Beine stammen aus dem Profilzyklus und
-behalten ihren Takt. Beim Weglaufen bleibt es beim gestauchten Profil — es gibt
-keine Rückansicht, und ein Gesicht wäre dort grob falsch.
+**Es gibt keine Front- und keine Rückansicht.** Alle fünf Blätter zeigen Tyson
+im reinen Profil — beim Laufen nach oben oder unten stand deshalb dasselbe
+Seitenbild da. Gelöst wird das über die **Tiefenachse**: je senkrechter die
+Bewegung, desto schmaler die Silhouette (bis 42 %), dazu ±6 % Größe (weg =
+kleiner, her = größer). Die Richtung ist damit ablesbar, ohne dass es Bilder
+gibt, die es nicht gibt.
+
+`tools/make_front.py` kann daraus zusätzlich frontale Laufbilder zusammensetzen
+(Kopf des Profils abschneiden, Rumpf stauchen, frontalen Kopf aus dem
+Emotionsblatt daraufsetzen). Das ist gebaut und getestet, aber **abgeschaltet** —
+ein Zusammenbau ersetzt keine gezeichneten Frontalansichten.
 
 **Der Atlas ist ohne Dithering quantisiert.** Bei 220 Farben ist kein Unterschied
 zu sehen, die Datei aber ein Viertel so groß (709 → 170 kB). *Mit* Dithering

@@ -456,14 +456,26 @@ test('Quer laufen bleibt das volle Profil', () => {
   assert.ok(Math.abs(v.scale - 1) < 0.01, 'die Groesse haengt an der Tiefe');
 });
 
-test('⚠️ Auf den Betrachter zu erscheint die FRONTALE Fassung', () => {
-  // Vorher stand beim Laufen nach unten dasselbe Seitenbild da -- der Hund lief
-  // sichtbar quer, waehrend er sich senkrecht bewegte.
-  const { v, st } = richtung(0, 3);
-  assert.equal(st.frontal, true, 'bleibt im Profil');
-  assert.match(v.name, /^front\d/, `zeigt ${v.name}`);
-  assert.equal(v.face, 1, 'das frontale Bild wurde gespiegelt oder gestaucht');
+test('Auf den Betrachter zu: verkuerzte Silhouette, groesser, kein Gesicht', () => {
+  // Die zusammengesetzten Frontalbilder sind auf Nutzerentscheid ABGESCHALTET
+  // (FRONT_SET leer). Die Richtung muss trotzdem ablesbar bleiben -- ueber die
+  // Verkuerzung und die Tiefenskalierung, nicht ueber ein Gesicht.
+  const { v } = richtung(0, 3);
+  assert.doesNotMatch(v.name, /^f(ront|run|prowl)\d/, `zeigt ${v.name}`);
+  assert.ok(Math.abs(v.face) < 0.5, `nicht verkuerzt: ${v.face.toFixed(2)}`);
   assert.ok(v.scale > 1.03, `kommt nicht naeher: ${v.scale.toFixed(3)}`);
+});
+
+test('Der Schalter fuer die Frontalbilder ist EINE Stelle', () => {
+  // Damit sich der Entscheid ohne Suche zurueckdrehen laesst: ein Eintrag in
+  // FRONT_SET schaltet sie wieder an, das Uebrige bleibt unangetastet.
+  const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
+  const m = src.match(/const FRONT_SET = \{([^}]*)\}/);
+  assert.ok(m, 'FRONT_SET nicht gefunden');
+  assert.equal(m[1].trim(), '', 'die Frontalbilder sind wieder an -- Absicht?');
+  // Die Bildreihen und der Auswahlpfad muessen erhalten bleiben
+  assert.match(src, /frontWalk:\s*\[/, 'die Bildreihen wurden geloescht');
+  assert.match(src, /FRONT_SET\[p\.anim\]/, 'der Auswahlpfad wurde geloescht');
 });
 
 test('⚠️ Von hinten gibt es KEIN Gesicht', () => {

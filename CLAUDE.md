@@ -283,8 +283,15 @@ gibt keine Front- und keine Rueckansicht. Beim Laufen nach oben/unten stand
 deshalb dasselbe Seitenbild da: der Hund lief sichtbar quer, waehrend er sich
 senkrecht bewegte.
 
-**Frontale Laufbilder sind jetzt ZUSAMMENGESETZT** (`tools/make_front.py`, 11
-Bilder): vom Profil den rechten Teil (Kopf + Hals) abschneiden, den Rumpf auf
+⚠️ **Die zusammengesetzten Frontalbilder sind ABGESCHALTET** (Nutzerentscheid
+2026-08-19: „gefallen mir nicht"). `FRONT_SET = {}` in `render.js` ist der
+einzige Schalter — ein Eintrag dort holt sie zurueck, Bilder und Generator
+bleiben erhalten. Was BLEIBT: die verkuerzte Silhouette und die
+Tiefenskalierung (s. unten) — die Richtung ist weiter ablesbar, nur ohne
+Gesicht von vorn. Ein Test pinnt den Schalter, damit ein Wiedereinschalten
+bewusst geschieht.
+
+**Wie sie gebaut waren** (`tools/make_front.py`, 11 Bilder): vom Profil den rechten Teil (Kopf + Hals) abschneiden, den Rumpf auf
 58 % stauchen — die gestauchten Flanken lesen sich als Brust — und den
 **frontalen Kopf aus dem Emotionsblatt** (`emo_r0c0`) daraufsetzen. Die Beine
 kommen aus dem Profilzyklus und behalten damit ihren Takt. Kein Ersatz fuer
@@ -346,7 +353,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 73 Tests (Eingabe, Animation, Zeiger, Meta)
+cd client && npm test                                  # 74 Tests (Eingabe, Animation, Zeiger, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -354,8 +361,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**134 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 73 (`input` 13 · `anim` 35 · `pointer` 17 · `meta` 8). Der Client testet mit einem
+**135 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 74 (`input` 13 · `anim` 36 · `pointer` 17 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —
