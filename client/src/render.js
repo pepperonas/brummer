@@ -23,7 +23,28 @@ const ANIM_FRAMES = {
   dig:     ['sniff'],
   stunned: ['sleep0'],
 };
-const ANIM_FPS = { walk: 9, prowl: 7, run: 13, bite: 14, default: 6 };
+// Bildrate nur noch fuer Posen OHNE Fortbewegung. Alles, was laeuft, haengt an
+// der zurueckgelegten STRECKE (s. STRIDE) -- eine feste Bildrate loest die Beine
+// vom Boden, sobald das Tempo nicht exakt zum Takt passt ("foot sliding").
+const ANIM_FPS = { bark: 8, sniff: 6, dig: 10, stunned: 2, default: 6 };
+
+// Schrittlaenge in Welteinheiten fuer EINEN vollen Zyklus. Daraus ergibt sich
+// der Takt: Zyklen/s = Tempo / Schrittlaenge. Der Hund ist 68 Einheiten lang.
+//
+// ⚠️ Vorher lief der Sprint mit 13 fps auf zwei Bildern = 6,5 Zyklen/s, das
+// sind 52 Einheiten Schrittlaenge -- KUERZER als der Geh-Schritt (119) bei
+// fast doppeltem Tempo und 0,77 Koerperlaengen pro Galoppsprung. Ein echter
+// Hund macht 2-2,5 Koerperlaengen bei 2,5-3,5 Zyklen/s. Daher das Flimmern.
+export const STRIDE = { walk: 95, prowl: 86, run: 120 };
+
+// Fusstritte je Zyklus (Phasenlage 0..1). Staub kommt beim AUFSETZEN, nicht
+// nach Wuerfel -- gewuerfelter Staub haengt an der Bildrate des Geraets.
+const FOOTFALL = { run: [0.06, 0.52], walk: [0.0, 0.5], prowl: [0.0, 0.5] };
+
+export const BITE_DUR = BITE.windup + BITE.active;   // 0,26 s -- so lange dauert der Biss
+export const BITE_LAND = 0.16;                        // Nachschwingen nach dem Zuschnappen
+
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 export class Renderer {
   constructor(canvas, atlasImg, atlasJson) {
@@ -33,7 +54,7 @@ export class Renderer {
     this.atlas = atlasJson;
     this.pivots = atlasJson.meta.brummer?.pivots || {};
     this.cam = { x: ARENA.w / 2, y: ARENA.h / 2, zoom: 1 };
-    this.phase = new Map();       // slot -> Animationsphase
+    this.phase = new Map();       // slot -> Animationszustand (s. _animState)
     this.fx = [];
     this.ground = this._makeGround();
     this.reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -128,6 +149,19 @@ export class Renderer {
   }
 
   // ------------------------------------------------------------ Zeichnen
+  /** Animationszustand je Spieler. Haelt Phase, geglaettete Werte und die
+   *  lokale Biss-Uhr -- alles, was zwischen zwei Bildern ueberleben muss. */
+  _animState(slot) {
+    let st = this.phase.get(slot);
+    if (!st) {
+      st = { ph: 0, lift: 0, squash: 1, rot: 0, dx: 0,
+             px: null, py: null, speed: 0,
+             biteT: -1, wasBite: false, pushed: false };
+      this.phase.set(slot, st);
+    }
+    return st;
+  }
+
   frame(name) { return this.atlas.frames[name]; }
 
   drawSprite(name, wx, wy, opt = {}) {
@@ -139,7 +173,10 @@ export class Renderer {
     const w = f.frame.w * s, h = f.frame.h * s;
     const dy = (this.pivots[name]?.dy || 0) * s;
     ctx.save();
-    ctx.translate(sx, sy + (opt.lift || 0) * this.cam.zoom);
+    ctx.translate(sx + (opt.dx || 0) * this.cam.zoom, sy + (opt.lift || 0) * this.cam.zoom);
+    // ⚠️ Die Drehung steht VOR dem Spiegeln, wirkt also im ungespiegelten
+    // System. Wer nach vorn lehnen will, muss den Winkel mit facing
+    // multiplizieren -- sonst lehnt der linkslaufende Hund nach hinten.
     if (opt.rot) ctx.rotate(opt.rot);
     if (opt.flip) ctx.scale(-1, 1);
     if (opt.squash) ctx.scale(1 / opt.squash, opt.squash);
@@ -247,33 +284,140 @@ export class Renderer {
   /** Wahl von Frame + prozeduraler Bewegung. Die Blaetter liefern Posen,
    *  keine Zwischenbilder -- Leben kommt hier dazu. */
   dogVisual(p, dt) {
-    const key = p.slot;
-    let ph = this.phase.get(key) || 0;
-    const list = ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle;
-    const fps = ANIM_FPS[p.anim] || ANIM_FPS.default;
-    ph += dt * fps;
-    this.phase.set(key, ph);
-    const idx = Math.floor(ph) % list.length;
-    const name = list[idx];
+    const st = this._animState(p.slot);
+    dt = Math.min(dt, 0.05);              // Tab-Wechsel darf die Phase nicht schleudern
 
-    let lift = 0, squash = 1, rot = 0;
-    const cyc = ph % 1;
-    if (!this.reduced) {
-      if (p.anim === 'walk' || p.anim === 'prowl') lift = -Math.abs(Math.sin(ph * Math.PI)) * 3;
-      else if (p.anim === 'run') lift = -Math.abs(Math.sin(ph * Math.PI)) * 9;
-      else if (p.anim === 'idle') { lift = Math.sin(this.t * 1.9 + key) * 1.4; squash = 1 + Math.sin(this.t * 1.9 + key) * 0.008; }
-      else if (p.anim === 'bite') { lift = -7; squash = 0.97; }
-      else if (p.anim === 'dig')  { lift = Math.sin(this.t * 26) * 2.5; rot = Math.sin(this.t * 26) * 0.03; }
-      else if (p.anim === 'bark') { squash = 1.04; }
-      else if (p.anim === 'stunned') rot = 0.05;
+    // --- Tempo aus der TATSAECHLICH gezeichneten Strecke -------------------
+    // Nicht aus vx/vy: fremde Figuren werden interpoliert, und die Beine
+    // muessen zu dem passen, was auf dem Schirm passiert, nicht zur Physik.
+    let dist = 0;
+    if (st.px !== null) dist = Math.hypot(p.x - st.px, p.y - st.py);
+    if (dist > 70) dist = 0;              // Sprung nach Paketverlust nicht in die Phase geben
+    st.px = p.x; st.py = p.y;
+    const roh = dt > 0 ? dist / dt : 0;
+    st.speed += (roh - st.speed) * (1 - Math.exp(-14 * dt));
+    const kraft = clamp01(st.speed / DOG.run);          // 0 = steht, 1 = Vollgas
+
+    // --- Biss: eigener Zeitgeber, an der Flanke gestartet ------------------
+    // Der Schnappschuss traegt keinen Biss-Fortschritt (das waere ein Byte je
+    // Spieler und Takt). Die Dauer ist aber eine Konstante, also laeuft die
+    // Uhr lokal -- fluessig statt auf 30 Hz gerastert.
+    const beisst = p.anim === 'bite';
+    if (beisst && !st.wasBite) { st.biteT = 0; st.pushed = false; }
+    st.wasBite = beisst;
+    if (st.biteT >= 0) {
+      st.biteT += dt;
+      if (st.biteT > BITE_DUR + BITE_LAND) st.biteT = -1;
     }
-    return { name, lift, squash, rot };
+
+    // --- Fortbewegung: Phase folgt der Strecke -----------------------------
+    const list = ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle;
+    const stride = STRIDE[p.anim];
+    const vorher = st.ph;
+    if (stride) st.ph += dist / stride;
+    else        st.ph += dt * (ANIM_FPS[p.anim] || ANIM_FPS.default) / list.length;
+
+    const u = st.ph - Math.floor(st.ph);
+    let name = list[Math.min(list.length - 1, Math.floor(u * list.length))];
+    let zLift = 0, zSquash = 1, zRot = 0, zDx = 0;
+
+    if (!this.reduced) {
+      if (p.anim === 'run') {
+        // Galopp: EIN Flugbogen je Zyklus, gelegt auf das gestreckte Bild.
+        // Vorher hob |sin| den Hund zweimal je Zyklus -- ein Huepfen, kein Galopp.
+        const flug   = Math.max(0, Math.sin((u - 0.5) * 2 * Math.PI));  // 2. Haelfte
+        const sammeln = Math.max(0, Math.sin(u * 2 * Math.PI));         // 1. Haelfte
+        zLift   = -(5 + 11 * kraft) * flug;
+        zSquash = 1 - 0.11 * kraft * flug + 0.05 * kraft * sammeln;     // strecken / stauchen
+        zRot    = (0.05 + 0.055 * kraft) * p.facing;                    // Vorlage ins Tempo
+      } else if (p.anim === 'walk' || p.anim === 'prowl') {
+        const hoch = Math.abs(Math.sin(u * 2 * Math.PI));
+        zLift   = -hoch * (p.anim === 'prowl' ? 2.2 : 3);
+        zSquash = 1 + 0.015 * hoch;
+        zRot    = 0.015 * p.facing;
+      } else if (p.anim === 'idle') {
+        const a = Math.sin(this.t * 1.9 + p.slot);
+        zLift = a * 1.4; zSquash = 1 + a * 0.008;
+      } else if (p.anim === 'dig') {
+        zLift = Math.sin(this.t * 26) * 2.5; zRot = Math.sin(this.t * 26) * 0.03;
+      } else if (p.anim === 'bark') {
+        zSquash = 1.04;
+      } else if (p.anim === 'stunned') {
+        zRot = 0.05;
+      }
+
+      // --- Biss ueberschreibt alles ---------------------------------------
+      if (st.biteT >= 0) {
+        if (st.biteT < BITE.windup) {
+          // ANTICIPATION: zurueckziehen und ducken. Ohne sie wirkt jeder
+          // Angriff wie ein Schnitt -- der Zuschauer sieht ihn nicht kommen.
+          const k = st.biteT / BITE.windup, e = k * k;
+          name = 'bite0';
+          zDx = -11 * e * p.facing;
+          zLift = 3.5 * e;
+          zSquash = 1 - 0.10 * e;
+          zRot = -0.06 * e * p.facing;
+        } else if (st.biteT < BITE_DUR) {
+          // ZUSCHNAPPEN: explosiv raus, dann auslaufen (ease-out), Flugbogen.
+          const k = (st.biteT - BITE.windup) / BITE.active;
+          const e = 1 - Math.pow(1 - k, 3);
+          const bogen = Math.sin(k * Math.PI);
+          name = 'bite1';
+          zDx = 15 * e * p.facing;
+          zLift = -(2 + 15 * bogen);
+          zSquash = 1 - 0.17 * bogen;
+          zRot = 0.14 * e * p.facing;
+        } else {
+          // NACHSCHWINGEN: landen, einfedern, ausschwingen. Der Name kommt
+          // wieder aus der Fortbewegung -- der Biss ist vorbei, der Koerper
+          // federt nur noch aus.
+          const k = clamp01((st.biteT - BITE_DUR) / BITE_LAND);
+          const federn = (1 - k) * Math.cos(k * Math.PI * 1.6);
+          zSquash -= 0.13 * federn;
+          zLift += 2.5 * federn;
+        }
+      }
+    }
+
+    // --- Glaetten: keine Spruenge zwischen zwei Zustaenden -----------------
+    // ⚠️ Die Glaettung ist ein Tiefpass und daempft damit auch den Flugbogen,
+    // der ja selbst schwingt. Gemessen bei 2,94 Zyklen/s: Rate 22 liess nur
+    // 77 % der Sprunghoehe uebrig und schob den Bogen 38 ms hinter den
+    // Bildwechsel. Rate 55 haelt 95 % und 18 ms -- unter einem Bild bei 60 Hz --
+    // und glaettet den Zustandswechsel immer noch ueber ~3 Bilder.
+    // Beim Biss noch schneller, sonst frisst sie den Schlag.
+    const rate = st.biteT >= 0 ? 90 : 55;
+    const a = 1 - Math.exp(-rate * dt);
+    st.lift   += (zLift   - st.lift)   * a;
+    st.squash += (zSquash - st.squash) * a;
+    st.rot    += (zRot    - st.rot)    * a;
+    st.dx     += (zDx     - st.dx)     * a;
+
+    // --- Staub auf den Fusstritt ------------------------------------------
+    if (!this.reduced && stride && p.anim === 'run' && kraft > 0.45) {
+      for (const f of FOOTFALL.run) {
+        if (Math.floor(vorher - f) !== Math.floor(st.ph - f)) {
+          this.dust(p.x - p.facing * 26, p.y + 3, 1, 14);
+        }
+      }
+    }
+    // Abstoss-Staub genau im Moment des Zuschnappens (nicht erst, wenn der
+    // Server den Treffer bestaetigt -- das waere eine halbe Netzrunde spaeter).
+    if (!this.reduced && st.biteT >= BITE.windup && !st.pushed) {
+      st.pushed = true;
+      this.dust(p.x - p.facing * 20, p.y + 2, 3, 20);
+    }
+
+    return { name, lift: st.lift, squash: st.squash, rot: st.rot, dx: st.dx, air: -st.lift };
   }
 
   drawDog(p, dt) {
     const v = this.dogVisual(p, dt);
     const { ctx } = this;
-    this.drawShadow(p.x, p.y, DOG.r * 1.5, p.anim === 'run' || p.anim === 'bite' ? 0.2 : 0.32);
+    // Der Schatten haengt an der Flughoehe, nicht am Zustandsnamen: je hoeher
+    // der Hund, desto kleiner und blasser. Das erst macht den Sprung lesbar.
+    const hoch = Math.min(1, Math.max(0, v.air) / 18);
+    this.drawShadow(p.x, p.y, DOG.r * 1.5 * (1 - 0.3 * hoch), 0.34 - 0.18 * hoch);
 
     // Farbring des Spielers -- man muss sofort sehen, wer wer ist
     const [sx, sy] = this.toScreen(p.x, p.y);
@@ -286,14 +430,14 @@ export class Renderer {
     ctx.restore();
 
     this.drawSprite(v.name, p.x, p.y, {
-      flip: p.facing < 0, lift: v.lift, squash: v.squash, rot: v.rot,
+      flip: p.facing < 0, lift: v.lift, squash: v.squash, rot: v.rot, dx: v.dx,
       alpha: p.stun > 0 ? 0.82 : 1,
     });
 
     // Getragener Knochen an der Schnauze
     if (p.carrying) {
       const f = this.frame('bone');
-      if (f) this.drawSprite('bone', p.x + p.facing * 52, p.y - 52 + v.lift * 0.5, { scale: 0.85 });
+      if (f) this.drawSprite('bone', p.x + p.facing * 52, p.y - 52, { scale: 0.85, dx: v.dx, lift: v.lift });
     }
   }
 

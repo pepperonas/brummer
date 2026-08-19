@@ -19,12 +19,33 @@ export function isTypingTarget(el) {
   return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
 }
 
+/**
+ * Tasten, deren Druck GERASTET wird.
+ *
+ * Die Eingabe wird nur im Servertakt abgetastet (30 Hz = alle 33 ms). Ein
+ * kuerzerer Druck faellt zwischen zwei Abtastungen durch und kommt nie an --
+ * live gemessen: unter 20 ms loeste kein Biss aus, der Spieler drueckt und es
+ * passiert nichts. Deshalb merkt sich der Handler jeden Druck bis zur
+ * naechsten Abtastung.
+ *
+ * ⚠️ Sprint ist bewusst NICHT dabei: das ist ein Halten, kein Antippen. Ein
+ * gerasteter Sprint waere ein Ein-Bild-Satz nach vorn.
+ */
+const TAP_BITS = {
+  Space: BTN.BITE,
+  KeyE: BTN.BARK,
+  KeyQ: BTN.NOSE,
+  KeyF: BTN.NOSE,
+};
+
 export class Input {
   constructor(canvas) {
     this.canvas = canvas;
     this.keys = new Set();
+    this.tapped = 0;               // gerastete Druecke, bis read() sie abholt
     this.stick = { active: false, id: null, ox: 0, oy: 0, x: 0, y: 0 };
     this.touchBtn = { bite: false, bark: false, nose: false, run: false };
+    this.tapTouch = 0;             // dasselbe fuer die Bildschirmknoepfe
     this.onPause = null;
 
     addEventListener('keydown', e => {
@@ -36,6 +57,7 @@ export class Input {
       if (e.code === 'Escape' && this.onPause) this.onPause();
       if (this._isGameKey(e.code)) e.preventDefault();
       this.keys.add(e.code);
+      this.tapped |= TAP_BITS[e.code] || 0;
     });
     // keyup NICHT toren: wer beim Loslassen gerade ins Feld geklickt hat,
     // haette sonst eine Taste, die fuer immer gedrueckt bleibt.
@@ -102,7 +124,21 @@ export class Input {
     if (k.has('KeyE') || this.touchBtn.bark) btn |= BTN.BARK;
     if (k.has('KeyQ') || k.has('KeyF') || this.touchBtn.nose) btn |= BTN.NOSE;
 
+    // Gerastete Druecke einmal mitgeben, dann loeschen. read() laeuft genau
+    // einmal je Servertakt (main.js), die Raste wird also nie doppelt gelesen.
+    btn |= this.tapped | this.tapTouch;
+    this.tapped = 0;
+    this.tapTouch = 0;
+
     return { dx, dy, btn };
+  }
+
+  /** Bildschirmknopf gedrueckt -- rastet wie eine Taste. */
+  pressTouch(key) {
+    this.touchBtn[key] = true;
+    if (key === 'bite') this.tapTouch |= BTN.BITE;
+    else if (key === 'bark') this.tapTouch |= BTN.BARK;
+    else if (key === 'nose') this.tapTouch |= BTN.NOSE;
   }
 
   stickView() { return this.stick.active ? this.stick : null; }

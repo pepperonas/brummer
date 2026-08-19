@@ -133,9 +133,10 @@ function loop(ts) {
   const me = players.find(p => p.you);
   if (me) renderer.follow(me.x, me.y, dt);
 
-  // Staub unter rennenden Hunden
+  // Sprint-Staub kommt jetzt aus dem Renderer -- dort liegt die Schrittphase,
+  // also kann der Staub auf den FUSSTRITT fallen statt nach Wuerfel. Der alte
+  // Wurf hier haing an der Bildrate: bei 144 Hz das 2,4-fache eines 60-Hz-Geraets.
   for (const p of players) {
-    if (p.anim === 'run' && Math.random() < 0.35) renderer.dust(p.x - p.facing * 30, p.y + 4, 1, 12);
     if (p.anim === 'dig' && Math.random() < 0.5) renderer.dust(p.x + p.facing * 40, p.y, 1, 16);
   }
   // Schnueffeln macht Depots sichtbar
@@ -229,7 +230,7 @@ input.onPause = () => { if (running) leave(); };
 
 for (const [id, key] of [['t-bite', 'bite'], ['t-bark', 'bark'], ['t-nose', 'nose'], ['t-run', 'run']]) {
   const el = $('#' + id);
-  const on = e => { e.preventDefault(); input.touchBtn[key] = true; };
+  const on = e => { e.preventDefault(); input.pressTouch(key); };
   const off = e => { e.preventDefault(); input.touchBtn[key] = false; };
   el.addEventListener('pointerdown', on);
   el.addEventListener('pointerup', off);

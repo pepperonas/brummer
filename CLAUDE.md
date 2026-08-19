@@ -163,6 +163,56 @@ Breiten-Passung ließ auf jedem normalen Bildschirm tote Bänder oben und unten.
 Und `/ws` braucht `proxy_read_timeout 3600s`, sonst fliegen ruhige Spieler
 nach 60 s raus.
 
+## Animation
+
+**Der Schritt haengt an der STRECKE, nicht an einer Bildrate.** `dogVisual`
+zaehlt die Phase mit `dist / STRIDE[anim]` hoch — daraus ergibt sich der Takt
+von selbst (Zyklen/s = Tempo / Schrittlaenge), und die Beine bleiben bei jedem
+Tempo und jeder Geraete-Bildrate am Boden. Eine feste Bildrate loest sie davon
+(„foot sliding"), sobald das Tempo nicht exakt zum Takt passt.
+
+⚠️ **Der alte Sprint war nachweislich falsch herum:** 2 Bilder à 13 fps ergaben
+6,5 Galoppzyklen/s und damit **52 Welteinheiten Schrittlaenge — KUERZER als der
+Geh-Schritt (119)** bei fast doppeltem Tempo, also 0,77 Koerperlaengen je
+Sprung. Ein echter Hund macht 2–2,5 bei 2,5–3,5 Zyklen/s. Das war die Ursache
+des Flimmerns. Jetzt `STRIDE.run = 120` → live gemessen 3,31 Zyklen/s bei
+Tempo 387. In `client/test/anim.test.mjs` gepinnt, inklusive der Regel, dass
+der Sprint-Schritt laenger sein muss als der Geh-Schritt.
+
+**Galopp:** EIN Flugbogen je Zyklus, gelegt auf das gestreckte Bild (vorher hob
+`|sin(ph·π)|` zweimal je Zyklus = Huepfen statt Galopp). Hoehe, Streckung und
+Vorlage skalieren mit dem Tempo. Der Schatten schrumpft und verblasst mit der
+Flughoehe — erst das macht den Sprung lesbar.
+
+**Biss:** eigene Uhr, an der Flanke gestartet — der Schnappschuss traegt keinen
+Biss-Fortschritt (waere ein Byte je Spieler und Takt), die Dauer ist aber eine
+Konstante. Drei Abschnitte statt einer Bildschleife: **Anticipation** (11
+Einheiten zurueckziehen, ducken), **Zuschnappen** (ease-out nach vorn, Flugbogen,
+gestreckt) und **Nachschwingen** (einfedern, ausschwingen). `bite0` ist der
+Anlauf, `bite1` der Schlag — vorher liefen beide als 14-fps-Schleife. Live
+gemessen: −9,5 zurueck / +15 vor / 16,7 hoch / squash 0,834.
+
+⚠️ **Die Drehung steht in `drawSprite` VOR dem Spiegeln**, wirkt also im
+ungespiegelten System: jeder Lehnwinkel muss mit `facing` multipliziert werden,
+sonst lehnt der linkslaufende Hund nach hinten. Gepinnt.
+
+⚠️ **Die Glaettung ist ein Tiefpass und daempft den Flugbogen mit.** Bei 2,94
+Zyklen/s liess Rate 22 nur 77 % der Sprunghoehe uebrig und schob den Bogen
+38 ms hinter den Bildwechsel. Rate 55 haelt 95 % und 18 ms (unter einem Bild bei
+60 Hz) und glaettet Zustandswechsel weiterhin ueber ~3 Bilder.
+
+**Staub faellt auf den Fusstritt**, nicht nach Wuerfel: der alte Wurf in
+`main.js` (`Math.random() < 0.35` je Bild) haing an der Bildrate — bei 144 Hz
+das 2,4-fache eines 60-Hz-Geraets.
+
+**Eingabe-Raste (`TAP_BITS` in `input.js`).** Die Eingabe wird nur im Servertakt
+abgetastet (30 Hz). **Live gemessen: ein Druck unter 20 ms loeste keinen Biss
+aus** — er fiel zwischen zwei Abtastungen durch, der Spieler drueckte und nichts
+geschah. Jeder Druck wird jetzt bis zur naechsten Abtastung gerastet (danach
+gemessen: schon 2 ms reichen). ⚠️ Sprint ist bewusst NICHT dabei (Halten, kein
+Antippen), und die Raste sitzt HINTER dem Textfeld-Tor — sonst beisst jeder
+Leerschlag beim Namentippen.
+
 ## Grafik
 
 **Die Blätter sind Posen, keine Zyklen.** Gemessen an der Rückenhöhe über der
@@ -189,7 +239,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 15 Tests (Eingabe-Tor, Teilbild/Meta)
+cd client && npm test                                  # 36 Tests (Eingabe, Animation, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -197,8 +247,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**76 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 15 (`input` 7 · `meta` 8). Der Client testet mit einem
+**97 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 36 (`input` 13 · `anim` 15 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —

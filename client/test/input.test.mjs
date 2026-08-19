@@ -72,6 +72,64 @@ test('Cmd+W und Strg+A gehoeren dem Browser', () => {
   assert.equal(press('KeyA', { mods: { ctrl: true } }), false, 'Strg+A abgefangen');
 });
 
+// --- Kurze Druecke duerfen nicht verloren gehen -----------------------------
+
+const { BTN } = await import('../../shared/sim.js');
+
+/** Taste loslassen (keyup). */
+function release(code) {
+  handlers.keyup({ code });
+}
+
+test('Ein Druck kuerzer als ein Abtastschritt kommt trotzdem an', () => {
+  // Live gemessen: unter 20 ms loeste kein Biss aus. Die Eingabe wird nur
+  // 30x/s abgetastet -- ohne Raste faellt der Druck zwischen zwei Schritte.
+  input.keys.clear(); input.tapped = 0; input.read();
+  press('Space');
+  release('Space');                       // beides VOR der naechsten Abtastung
+  assert.equal(input.keys.has('Space'), false, 'Taste ist schon wieder los');
+  assert.ok(input.read().btn & BTN.BITE, 'der Biss ging verloren');
+});
+
+test('Die Raste feuert genau EINMAL, nicht bei jeder Abtastung', () => {
+  input.keys.clear(); input.tapped = 0; input.read();
+  press('Space'); release('Space');
+  assert.ok(input.read().btn & BTN.BITE);
+  assert.equal(input.read().btn & BTN.BITE, 0, 'der Biss wiederholt sich von selbst');
+});
+
+test('Gehaltene Tasten funktionieren unveraendert weiter', () => {
+  input.keys.clear(); input.tapped = 0; input.read();
+  press('Space');                          // halten, kein keyup
+  assert.ok(input.read().btn & BTN.BITE);
+  assert.ok(input.read().btn & BTN.BITE, 'gehaltene Taste faellt nach einem Schritt aus');
+  release('Space');
+  assert.equal(input.read().btn & BTN.BITE, 0);
+});
+
+test('Bellen und Nase rasten ebenfalls', () => {
+  for (const [code, bit] of [['KeyE', BTN.BARK], ['KeyQ', BTN.NOSE], ['KeyF', BTN.NOSE]]) {
+    input.keys.clear(); input.tapped = 0; input.read();
+    press(code); release(code);
+    assert.ok(input.read().btn & bit, `${code} ging verloren`);
+  }
+});
+
+test('⚠️ Sprint rastet NICHT -- das ist ein Halten, kein Antippen', () => {
+  input.keys.clear(); input.tapped = 0; input.read();
+  press('ShiftLeft'); release('ShiftLeft');
+  assert.equal(input.read().btn & BTN.RUN, 0,
+    'ein geraster Sprint waere ein Ein-Bild-Satz nach vorn');
+});
+
+test('Ein Leerzeichen im Namensfeld beisst nicht', () => {
+  // Waere die Raste vor dem Textfeld-Tor gesetzt, wuerde jeder Leerschlag
+  // beim Tippen einen Biss ausloesen.
+  input.keys.clear(); input.tapped = 0; input.read();
+  press('Space', { tag: 'INPUT' });
+  assert.equal(input.read().btn & BTN.BITE, 0, 'Tippen loeste einen Biss aus');
+});
+
 test('isTypingTarget vertraegt fehlende Ziele', () => {
   assert.equal(isTypingTarget(null), false);
   assert.equal(isTypingTarget(undefined), false);
