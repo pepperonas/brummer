@@ -1,4 +1,4 @@
-// Beissfest -- Einstieg. Verbindet Eingabe, Netz und Darstellung.
+// Brummer -- Einstieg. Verbindet Eingabe, Netz und Darstellung.
 import { Net, INTERP_MS } from './net.js';
 import { Renderer, SLOT_COLORS } from './render.js';
 import { Input } from './input.js';
@@ -12,10 +12,10 @@ let renderer = null, running = false, revealUntil = 0;
 let lastCd = { bite: 0, bark: 0, nose: 0 };
 
 const store = {
-  get name() { return localStorage.getItem('bf-name') || ''; },
-  set name(v) { localStorage.setItem('bf-name', v); },
-  get code() { return localStorage.getItem('bf-code') || ''; },
-  set code(v) { localStorage.setItem('bf-code', v); },
+  get name() { return localStorage.getItem('br-name') || ''; },
+  set name(v) { localStorage.setItem('br-name', v); },
+  get code() { return localStorage.getItem('br-code') || ''; },
+  set code(v) { localStorage.setItem('br-code', v); },
 };
 
 // ------------------------------------------------------------- Laden
@@ -247,4 +247,4 @@ addEventListener('orientationchange', () => setTimeout(checkOrientation, 120));
 loadLeaderboard();
 
 // Debug-Zugang: erlaubt Messungen im laufenden Spiel (Browser-Tests nutzen ihn).
-window.__bf = { get net() { return net; }, get renderer() { return renderer; }, input, get running() { return running; } };
+window.__br = { get net() { return net; }, get renderer() { return renderer; }, input, get running() { return running; } };

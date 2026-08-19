@@ -1,9 +1,9 @@
-# Beißfest
+# Brummer
 
 Ein Online-Arenaspiel für 2–8 Spieler, gebaut aus einer Sammlung Sprite-Blätter
 von **Tyson** — einem schwarzen Labrador-Rottweiler-Mischling.
 
-**Spielen: https://beissfest.celox.io**
+**Spielen: https://brummer.celox.io**
 
 Knochen holen, im Maul zur eigenen Hütte tragen, abliefern. Wer gebissen wird,
 verliert ihn auf der Stelle. Drei Minuten pro Runde, die meisten Knochen
@@ -75,7 +75,7 @@ cd server && npm install && npm start
 cd client && npm install && npm run dev
 
 # Tests
-cd server && npm test      # 39 Tests: Simulation, Spielregeln, Datenhaltung
+cd server && npm test      # 41 Tests: Simulation, Spielregeln, Datenhaltung
 ```
 
 ### Grafik neu erzeugen

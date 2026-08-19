@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Beissfest asset pipeline, step 1: sheet -> freigestellte Einzelframes.
+Brummer asset pipeline, step 1: sheet -> freigestellte Einzelframes.
 
 Die Blaetter sind JPEGs auf einfarbigem Grund. Wir
   1. schneiden das 4x4-Raster (Zellen 688x384, Hilfslinien 2px),

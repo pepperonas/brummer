@@ -1,6 +1,6 @@
 <!doctype html>
 <meta charset="utf-8">
-<title>Beissfest Sprite-Lab</title>
+<title>Brummer Sprite-Lab</title>
 <style>
   body{margin:0;background:#171c19;color:#dfe7e1;font:14px/1.5 ui-monospace,Menlo,monospace}
   header{padding:12px 18px;border-bottom:1px solid #2b332e;display:flex;gap:18px;align-items:center;flex-wrap:wrap}
@@ -19,7 +19,7 @@
   .hint{color:#7e8a80;font-size:12px}
 </style>
 <header>
-  <h1>Beissfest · Sprite-Lab</h1>
+  <h1>Brummer · Sprite-Lab</h1>
   <label>fps <input id="fps" type="range" min="2" max="24" value="10"><span id="fpsv">10</span></label>
   <label><input id="ground" type="checkbox" checked> Bodenlinie</label>
   <span class="hint" id="info"></span>
@@ -66,7 +66,7 @@ function mkButtons(host, get, set) {
 
 function drawFrame(ctx, name, cx, baseY, alpha) {
   const f = data.frames[name]; if (!f) return;
-  const dy = (data.meta.beissfest.pivots[name] || {}).dy || 0;
+  const dy = (data.meta.brummer.pivots[name] || {}).dy || 0;
   ctx.globalAlpha = alpha;
   ctx.drawImage(atlas, f.frame.x, f.frame.y, f.frame.w, f.frame.h,
                 Math.round(cx - f.frame.w / 2), Math.round(baseY - f.frame.h + dy),

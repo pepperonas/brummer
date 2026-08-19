@@ -1,12 +1,20 @@
 # CLAUDE.md
 
-Hinweise für Claude Code beim Arbeiten in diesem Repo.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Was das ist
 
-**Beißfest** — Online-Arenaspiel für 2–8 Spieler, gebaut aus acht Sprite-Blättern
-des Hundes Tyson. Live: https://beissfest.celox.io · Repo: `pepperonas/beissfest`
-(öffentlich). VPS `69.62.121.168`, systemd `beissfest`, **Port 4263** (loopback).
+**Brummer** — Online-Arenaspiel für 2–8 Spieler, gebaut aus acht Sprite-Blättern
+des Hundes Tyson. Live: https://brummer.celox.io · Repo: `pepperonas/brummer`
+(öffentlich). VPS `69.62.121.168`, systemd `brummer`, **Port 4263** (loopback).
+
+⚠️ **Umbenannt am 2026-08-19** (vorher „Beißfest", `beissfest.celox.io`). Ordner,
+Repo-Inhalt und alle Dateien tragen den neuen Namen — **auf dem VPS läuft noch
+der alte Stand**. `deploy.sh` zeigt bereits auf `/opt/brummer` und
+`brummer.celox.io` und läuft deshalb ins Leere, bis die Umstellung erledigt ist:
+Schritt für Schritt in **`MIGRATION.md`** (GitHub-Repo, DNS, Zertifikat,
+Datenbank-Übernahme, 301 vom alten Host). Port 4263 tragen beide Dienste — der
+alte muss weg, bevor der neue bindet.
 
 ## Aufbau in einem Satz
 
@@ -19,8 +27,9 @@ artwork/   8 Original-JPEGs (v4 und v5 sind byte-identisch -> 7 verschiedene)
 tools/     Pipeline: cut_sprites.py -> cut_props.py -> pack_atlas.py, sprite-lab.html
 shared/    sim.js  -- EINZIGE Quelle der Spielphysik
 server/    index.js (HTTP+WS) · room.js (Arena) · bots.js · db.js
-client/    Canvas2D + Vite, kein Framework
+client/    Canvas2D + Vite, kein Framework (src/: net · render · input · main)
 system/    systemd-Units, nginx-vhost, Sicherungsskript
+PLAN.html  der Plan von vor dem Bau, als umgesetzt markiert (Hintergrund, keine Wahrheit)
 ```
 
 ## Regeln, die man nicht brechen darf
@@ -29,6 +38,10 @@ system/    systemd-Units, nginx-vhost, Sicherungsskript
 `Date.now()`, kein DOM. Sobald Server und Client dort auseinanderlaufen, ruckelt
 die eigene Figur bei jedem Schnappschuss. `sim.test.js` pinnt das mit einem
 Determinismus-Test; gemessene Abweichung im Betrieb: **0,3 Welteinheiten**.
+Zufall gehört in `room.js` — der Raum hat dafür einen **eigenen gesäten
+xorshift** (`rnd()`), bewusst nicht `Math.random`. Das ist erlaubt, weil Knochen,
+Depots und Rundenaufbau **nur** aus Schnappschüssen kommen; der Client simuliert
+davon nichts.
 
 **Treffer werden nur serverseitig geprüft.** Der Client schickt ausschließlich
 Eingaben. `setInput` klemmt Richtungswerte und Tastenmaske — ein manipulierter
@@ -41,6 +54,60 @@ Client wird davon nicht schneller (Test vorhanden).
 **Bots sind keine Sonderwege.** Sie erzeugen nur Eingaben und laufen durch
 dasselbe `stepPlayer`. Ein Bot kann damit nichts, was ein Spieler nicht auch
 könnte.
+
+## Der Vertrag zwischen `room.js` und `net.js`
+
+Das ist die zerbrechlichste Stelle im Repo, und sie steht in **zwei** Dateien.
+
+**Der Schnappschuss ist positionell.** `Room.snapshot()` schreibt Arrays statt
+Objekte (spart ~60 % Bytes), `Net._reconcile`/`view()` lesen sie über
+**Indizes**. Ein neues Feld heißt: beide Seiten anfassen, sonst liest der Client
+still den falschen Wert.
+
+```
+ps[i] = [slot, x, y, vx, vy, facing, animIdx, score, stam,
+         carrying(0|1), stunT*100, lastSeq, digT/DIG.time*100, sniff(0|1)]
+bs[i] = [boneId, x, y, traegerSlot | -1]      cs[i] = [cacheId, x, y]
+ev    = Ereignisse dieses Takts (bite · bark · deliver · dig · grab · join · leave · round)
+```
+
+**Die Animationsliste steht doppelt** — als Map in `room.js` (`ANIM`) und als
+Array in `net.js`. Die **Reihenfolge** ist der Vertrag; wer hinten anhängt, ist
+sicher, wer einsortiert, vertauscht dem Client die Posen.
+
+**Skalierte Felder werden im Client zurückgerechnet, teils mit fester Zahl.**
+`stunT` fährt in Hundertsteln, `digT` als Prozent von `DIG.time`. ⚠️ `net.js`
+rechnet dafür mit einer **hart notierten 2.0** statt mit `DIG.time` — wird die
+Grabzeit in `sim.js` geändert, zeigt der Client den falschen Fortschritt und
+sagt falsch voraus. Beide Stellen (`_reconcile`, `view`) mitziehen.
+
+**Nachrichten.** Client → Server: `join {name, room?, code?}` · `in {dx,dy,btn,seq}`
+· `ping {c}`. Server → Client: `hello {you, room, code, tickHz}` · `meta {ps}`
+(Namen/Bots je Slot, nur bei Wechseln) · `s` (Schnappschuss, 30 Hz) · `pong` ·
+`err`. Tastenmaske `BTN` = RUN 1 · BITE 2 · BARK 4 · NOSE 8.
+
+**HTTP im selben Prozess:** `GET /api/health` (Räume + Menschen), `/api/leaderboard`,
+`/api/me?code=`, `POST /api/register {name, code?}`; alles Übrige ist statische
+Auslieferung mit SPA-Rückfall auf `index.html`. ⚠️ Die Cache-Regel in
+`serveStatic` ist eine Hauslektion: gehashte Bundles `immutable`, **`index.html`
+niemals** — sonst fährt der Browser nach einem Deploy stundenlang das alte
+Bundle.
+
+## Räume und Runden
+
+Ein Raum = eine Arena = ein `Room`. **Zwei verschiedene Codes**, beide aus
+demselben verwechslungsarmen Alphabet (ohne I L O 0 1) und leicht zu verwechseln:
+der **Raumcode** ist 4-stellig und flüchtig (`join {room}`), der **Spielercode**
+6-stellig, liegt in SQLite und im `localStorage` (`br-code`) und ist das Konto.
+
+Schnellstart nimmt den ersten nicht vollen Raum, sonst wird einer angelegt;
+ein Raum ohne Menschen wird abgeräumt (der letzte bleibt stehen). `balanceBots()`
+hält **3** Bots je Raum vor, verdrängt Bots für ankommende Menschen und entfernt
+bei 0 Menschen alle — ein leerer Raum soll nicht rechnen.
+
+Rundenlauf: `play` 180 s → `over` 12 s (Auswertung, Eingaben tot) → `reset()`.
+⚠️ `ROUND.warmup` ist deklariert, aber **nirgends benutzt** — es gibt keine
+Aufwärmphase, wer eine erwartet, sucht vergeblich.
 
 ## Fallen, in die ich schon getappt bin
 
@@ -58,8 +125,9 @@ Reihenfolge *und* fehlende Absicherung. Beides ist jetzt drin
 **Die Rundentabelle braucht den Spielercode.** `recordRound` überspringt jeden
 Eintrag ohne `code` — im ersten Deploy blieb die Bestenliste deshalb leer,
 obwohl Runden zu Ende liefen. Der DB-Test konnte es nicht sehen, weil er den
-Code selbst übergibt; die Lücke lag in der Verdrahtung. Jetzt gepinnt, und der
-Pin wurde durch Mutation geprüft.
+Code selbst übergibt; die Lücke lag in der Verdrahtung (`index.js` hängt ihn
+beim `join` an den Spieler). Jetzt gepinnt, und der Pin wurde durch Mutation
+geprüft.
 
 **Der Spawnpunkt IST die eigene Hütte.** Ein Knochen dort wird im selben Takt
 gutgeschrieben. Das ist Absicht (natürliche Knochen fallen nie dorthin,
@@ -90,20 +158,38 @@ stehen — Staub und Speedlines macht die Engine, das ist steuerbarer.
 **Atlas ohne Dithering quantisieren** (220 Farben, 709 → 170 kB). *Mit* Dithering
 rauscht das schwarze Fell sichtbar.
 
-Nach jeder Änderung an der Pipeline: `tools/sprite-lab.html` öffnen und die
-**Zwiebelhaut** ansehen — wandert der Rücken, stimmt die Ausrichtung nicht.
+**Der Atlas ist eingecheckt** (`client/public/assets/atlas.{png,json}`), die
+Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
+`artwork/` etwas ändert — und danach: `tools/sprite-lab.html` öffnen und die
+**Zwiebelhaut** ansehen; wandert der Rücken, stimmt die Ausrichtung nicht.
 
 ## Arbeiten
 
 ```bash
-cd server && npm test          # 41 Tests
-cd server && npm start         # Port 4263
-cd client && npm run dev       # Port 5180, leitet /api + /ws weiter
-./deploy.sh                    # Tests -> Build -> rsync -> Neustart -> Probe
+cd server && npm test                                  # 41 Tests (node --test)
+cd server && node --test test/room.test.js             # eine Datei
+cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
+cd server && npm start                                 # Port 4263, DATA_DIR=./data
+cd client && npm run dev                               # Port 5180, leitet /api + /ws weiter
+./deploy.sh                                            # Tests -> Build -> rsync -> Neustart -> Probe
 ```
 
-`window.__bf` gibt im Browser Zugriff auf `net`, `renderer` und `input` —
-darüber laufen die Browser-Messungen (Drift, Kamera, Ereignisse).
+Tests liegen **nur** im Server (`sim` 15 · `room` 19 · `db` 7); `cd client && npm test`
+läuft ins Leere, es gibt kein `client/test/`. Browser-Prüfungen laufen von Hand:
+`window.__br` gibt Zugriff auf `net`, `renderer` und `input` — darüber wurden
+Drift, Kamera und Ereignisse gemessen.
+
+Grafik neu erzeugen (nur bei Änderungen in `artwork/`, braucht Pillow + ImageMagick):
+
+```bash
+python3 tools/cut_sprites.py && python3 tools/cut_props.py && python3 tools/pack_atlas.py
+```
+
+**Ausrollen** (Details in `DEPLOY.md`): `deploy.sh` spiegelt `server/` **ohne**
+`test/` und `public/`, legt den Client-Build nach `server/public/` und `shared/`
+**als Geschwister von `server/`** ab — die Importe heißen `../shared/sim.js`,
+diese Anordnung ist Teil des Vertrags. Danach `npm install --omit=dev`
+(better-sqlite3 wird nativ gebaut), Neustart, `/api/health`-Probe.
 
 **Neue Tests einmal mutieren.** Ein Test, den man nicht hat scheitern sehen, ist
 keine Zusicherung — beim Bestenlisten-Fehler war genau das der Nachweis.

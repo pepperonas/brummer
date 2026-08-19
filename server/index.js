@@ -1,4 +1,4 @@
-// Beissfest -- HTTP (Client + API) und WebSocket (Spiel) in EINEM Prozess.
+// Brummer -- HTTP (Client + API) und WebSocket (Spiel) in EINEM Prozess.
 // nginx ist reiner Vermittler, es gibt kein zweites Webroot.
 import http from 'node:http';
 import fs from 'node:fs';
@@ -191,7 +191,7 @@ setInterval(() => {
 }, 1000 / TICK_HZ);
 
 server.listen(PORT, HOST, () => {
-  console.log(`beissfest laeuft auf http://${HOST}:${PORT}  (Takt ${TICK_HZ} Hz)`);
+  console.log(`brummer laeuft auf http://${HOST}:${PORT}  (Takt ${TICK_HZ} Hz)`);
 });
 
 for (const sig of ['SIGINT', 'SIGTERM']) {

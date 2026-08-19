@@ -1,0 +1,6 @@
+[Unit]
+Description=Brummer - Datenbank sichern
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/brummer-backup.sh

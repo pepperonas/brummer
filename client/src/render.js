@@ -31,7 +31,7 @@ export class Renderer {
     this.ctx = canvas.getContext('2d', { alpha: false });
     this.img = atlasImg;
     this.atlas = atlasJson;
-    this.pivots = atlasJson.meta.beissfest?.pivots || {};
+    this.pivots = atlasJson.meta.brummer?.pivots || {};
     this.cam = { x: ARENA.w / 2, y: ARENA.h / 2, zoom: 1 };
     this.phase = new Map();       // slot -> Animationsphase
     this.fx = [];

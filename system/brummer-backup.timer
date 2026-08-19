@@ -1,5 +1,5 @@
 [Unit]
-Description=Beissfest - naechtliche Datenbanksicherung
+Description=Brummer - naechtliche Datenbanksicherung
 
 [Timer]
 OnCalendar=*-*-* 03:40:00

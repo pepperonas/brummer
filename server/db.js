@@ -8,7 +8,7 @@ import path from 'node:path';
 const DIR = process.env.DATA_DIR || path.join(process.cwd(), 'data');
 fs.mkdirSync(DIR, { recursive: true });
 
-export const db = new Database(path.join(DIR, 'beissfest.db'));
+export const db = new Database(path.join(DIR, 'brummer.db'));
 db.pragma('journal_mode = WAL');
 
 db.exec(`

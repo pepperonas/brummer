@@ -1,17 +1,17 @@
 [Unit]
-Description=Beissfest - Arenaspiel (Spielserver + Auslieferung)
+Description=Brummer - Arenaspiel (Spielserver + Auslieferung)
 After=network-online.target
 Wants=network-online.target
 
 [Service]
 Type=simple
-User=beissfest
-Group=beissfest
-WorkingDirectory=/opt/beissfest/server
+User=brummer
+Group=brummer
+WorkingDirectory=/opt/brummer/server
 Environment=NODE_ENV=production
 Environment=PORT=4263
 Environment=BIND_ADDRESS=127.0.0.1
-Environment=DATA_DIR=/opt/beissfest/data
+Environment=DATA_DIR=/opt/brummer/data
 ExecStart=/usr/bin/node index.js
 Restart=always
 RestartSec=3
@@ -22,7 +22,7 @@ NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
 ProtectHome=true
-ReadWritePaths=/opt/beissfest/data
+ReadWritePaths=/opt/brummer/data
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

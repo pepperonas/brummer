@@ -115,7 +115,7 @@ def main():
     meta = {
         "image": "atlas.png", "format": "RGBA8888",
         "size": {"w": MAXW, "h": AH}, "scale": "1",
-        "beissfest": {"pivots": pivots},
+        "brummer": {"pivots": pivots},
     }
     with open(os.path.join(OUT, "atlas.json"), "w") as f:
         json.dump({"frames": frames, "meta": meta}, f, indent=1)

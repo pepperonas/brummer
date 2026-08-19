@@ -9,18 +9,18 @@ ausgeliefert wie die API.
 ```bash
 # Port: NICHT annehmen, pruefen. 4242-4262 sind belegt.
 ssh root@69.62.121.168 'ss -tlnp | grep -oE "127.0.0.1:4[0-9]{4}" | sort -u'
-# -> beissfest laeuft auf 4263
+# -> brummer laeuft auf 4263
 
-ssh root@69.62.121.168 'adduser --system --group --home /opt/beissfest beissfest'
+ssh root@69.62.121.168 'adduser --system --group --home /opt/brummer brummer'
 ```
 
-nginx-vhost `/etc/nginx/sites-available/beissfest.celox.io` (Vorlage in
-`system/beissfest.celox.io.conf`), dann:
+nginx-vhost `/etc/nginx/sites-available/brummer.celox.io` (Vorlage in
+`system/brummer.celox.io.conf`), dann:
 
 ```bash
-ln -s /etc/nginx/sites-available/beissfest.celox.io /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/brummer.celox.io /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
-certbot certonly --nginx -d beissfest.celox.io
+certbot certonly --nginx -d brummer.celox.io
 ```
 
 > ⚠️ nginx ist hier **1.24**. Dort gilt `listen 443 ssl http2;` — das neuere
@@ -42,14 +42,14 @@ den Dienst neu.
 ## Nachsehen
 
 ```bash
-ssh root@69.62.121.168 'systemctl status beissfest --no-pager'
-ssh root@69.62.121.168 'journalctl -u beissfest -f'
-curl -s https://beissfest.celox.io/api/health
+ssh root@69.62.121.168 'systemctl status brummer --no-pager'
+ssh root@69.62.121.168 'journalctl -u brummer -f'
+curl -s https://brummer.celox.io/api/health
 ```
 
 ## Sicherung
 
-`beissfest-backup.timer` sichert `beissfest.db` naechtlich um 03:40 nach
-`/var/backups/beissfest/` (30 Staende). Gesichert wird ueber `sqlite3 .backup`,
+`brummer-backup.timer` sichert `brummer.db` naechtlich um 03:40 nach
+`/var/backups/brummer/` (30 Staende). Gesichert wird ueber `sqlite3 .backup`,
 **nicht** per `cp` — die Datenbank laeuft im WAL-Modus, eine Kopie erwischt
 sonst einen halben Schreibvorgang.
