@@ -451,47 +451,46 @@ function richtung(dx, dy, { anim = 'walk', bilder = 120 } = {}) {
 
 test('Quer laufen bleibt das volle Profil', () => {
   const { v, st } = richtung(3, 0);
-  assert.equal(st.frontal, false);
+  assert.equal(st.ansicht, 'profil');
   assert.ok(Math.abs(Math.abs(v.face) - 1) < 0.02, `Silhouette ${v.face}`);
   assert.ok(Math.abs(v.scale - 1) < 0.01, 'die Groesse haengt an der Tiefe');
 });
 
-test('Auf den Betrachter zu: verkuerzte Silhouette, groesser, kein Gesicht', () => {
-  // Die zusammengesetzten Frontalbilder sind auf Nutzerentscheid ABGESCHALTET
-  // (FRONT_SET leer). Die Richtung muss trotzdem ablesbar bleiben -- ueber die
-  // Verkuerzung und die Tiefenskalierung, nicht ueber ein Gesicht.
-  const { v } = richtung(0, 3);
-  assert.doesNotMatch(v.name, /^f(ront|run|prowl)\d/, `zeigt ${v.name}`);
-  assert.ok(Math.abs(v.face) < 0.5, `nicht verkuerzt: ${v.face.toFixed(2)}`);
+test('⚠️ Auf den Betrachter zu erscheint die gezeichnete FRONTansicht', () => {
+  // Vorher stand beim Laufen nach unten dasselbe Seitenbild da -- der Hund lief
+  // sichtbar quer, waehrend er sich senkrecht bewegte.
+  const { v, st } = richtung(0, 3);
+  assert.equal(st.ansicht, 'front', 'bleibt im Profil');
+  assert.match(v.name, /^front\d/, `zeigt ${v.name}`);
+  assert.equal(v.face, 1, 'die gezeichnete Ansicht wurde gespiegelt oder gestaucht');
   assert.ok(v.scale > 1.03, `kommt nicht naeher: ${v.scale.toFixed(3)}`);
 });
 
-test('Der Schalter fuer die Frontalbilder ist EINE Stelle', () => {
-  // Damit sich der Entscheid ohne Suche zurueckdrehen laesst: ein Eintrag in
-  // FRONT_SET schaltet sie wieder an, das Uebrige bleibt unangetastet.
+test('Front und Rueckansicht decken dieselben Zustaende ab', () => {
+  // Sonst wechselt der Hund in einer Richtung die Ansicht und in der anderen
+  // nicht -- beim Hin- und Herlaufen faellt das sofort auf.
   const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
-  const m = src.match(/const FRONT_SET = \{([^}]*)\}/);
-  assert.ok(m, 'FRONT_SET nicht gefunden');
-  assert.equal(m[1].trim(), '', 'die Frontalbilder sind wieder an -- Absicht?');
-  // Die Bildreihen und der Auswahlpfad muessen erhalten bleiben
-  assert.match(src, /frontWalk:\s*\[/, 'die Bildreihen wurden geloescht');
-  assert.match(src, /FRONT_SET\[p\.anim\]/, 'der Auswahlpfad wurde geloescht');
+  const keys = (n) => [...src.match(new RegExp(`const ${n}\\s*=\\s*\\{([^}]*)\\}`))[1]
+    .matchAll(/(\w+):/g)].map((m) => m[1]).sort();
+  assert.deepEqual(keys('FRONT_SET'), keys('BACK_SET'));
+  assert.ok(keys('FRONT_SET').includes('walk'));
+  assert.ok(keys('FRONT_SET').includes('run'));
 });
 
-test('⚠️ Von hinten gibt es KEIN Gesicht', () => {
-  // Es existiert keine Rueckansicht. Das frontale Bild dort zu zeigen waere
-  // grob falsch -- ein weglaufender Hund schaut einen nicht an.
+test('⚠️ Beim Weglaufen die RUECKansicht -- niemals das Gesicht', () => {
+  // Ein weglaufender Hund schaut einen nicht an. Das frontale Bild hier zu
+  // zeigen waere der grobste moegliche Fehler auf dieser Achse.
   const { v, st } = richtung(0, -3);
-  assert.equal(st.frontal, false, 'zeigt das Gesicht beim Weglaufen');
-  assert.doesNotMatch(v.name, /^f(ront|run|prowl)/);
+  assert.equal(st.ansicht, 'back', 'zeigt nicht die Rueckansicht');
+  assert.match(v.name, /^b(ack|run)\d/, `zeigt ${v.name}`);
+  assert.doesNotMatch(v.name, /^front|^frun/, 'zeigt das Gesicht beim Weglaufen');
+  assert.equal(v.face, 1, 'die gezeichnete Ansicht wurde gespiegelt oder gestaucht');
   assert.ok(v.scale < 0.97, `wird nicht kleiner: ${v.scale.toFixed(3)}`);
-  // stattdessen verkuerzte Silhouette
-  assert.ok(Math.abs(v.face) < 0.5, `nicht verkuerzt: ${v.face.toFixed(2)}`);
 });
 
 test('Diagonal bleibt beim Profil, nur schmaler', () => {
   const { v, st } = richtung(3, 3);
-  assert.equal(st.frontal, false);
+  assert.equal(st.ansicht, 'profil');
   assert.ok(Math.abs(v.face) > 0.5 && Math.abs(v.face) < 0.95,
     `Silhouette ${Math.abs(v.face).toFixed(2)} -- erwartet dazwischen`);
 });
@@ -507,7 +506,7 @@ test('Die Ansicht flackert an der Schwelle nicht', () => {
     // Richtung pendelt genau um die Schwelle
     const t = Math.sin(i / 9) * 0.12 + 0.62;
     p.x += 3 * (1 - t); p.y += 3 * t;
-    const f = r._animState(0).frontal;
+    const f = r._animState(0).ansicht;
     r.dogVisual(p, 1 / 60);
     if (vorher !== null && f !== vorher) wechsel++;
     vorher = f;
@@ -521,30 +520,35 @@ test('Im Stand faellt die Verkuerzung zurueck', () => {
   const st = r._animState(0);
   assert.ok(st.vert < 0.05, `bleibt verkuerzt stehen: ${st.vert.toFixed(2)}`);
   assert.ok(Math.abs(st.depth) < 0.05);
-  assert.equal(st.frontal, false);
+  assert.equal(st.ansicht, 'profil');
 });
 
-test('⚠️ Jede frontale Reihe hat so viele Bilder wie ihr Profil-Gegenstueck', () => {
-  // Die Schrittphase ist ein Bruchteil des Zyklus. Haetten die Reihen
-  // verschiedene Laengen, sprangen beim Ansichtswechsel die Beine.
+test('Jede Ansicht-Reihe ist nicht leer', () => {
+  // ⚠️ Frueher pinnte dieser Test GLEICHE Bildzahl wie beim Profil. Das war zu
+  // streng und schlicht falsch: die Schrittphase ist ein BRUCHTEIL des Zyklus,
+  // kein Bildindex. Vier Gehbilder decken je 25 % ab statt 20 % -- der Zyklus
+  // bleibt gleich lang, die Beine bleiben im Takt. Die gezeichneten Blaetter
+  // liefern vier Gehposen, das Profil hat fuenf.
   const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
   const liste = (n) => {
     const m = src.match(new RegExp(`${n}:\\s*\\[([^\\]]*)\\]`));
     assert.ok(m, `Reihe ${n} nicht gefunden`);
     return (m[1].match(/'/g) || []).length / 2;
   };
-  assert.equal(liste('frontWalk'), liste('walk'), 'frontWalk passt nicht zu walk');
-  assert.equal(liste('frontRun'), liste('run'), 'frontRun passt nicht zu run');
-  assert.equal(liste('frontProwl'), liste('prowl'), 'frontProwl passt nicht zu prowl');
+  for (const n of ['frontWalk', 'frontRun', 'backWalk', 'backRun']) {
+    assert.ok(liste(n) >= 1, `${n} ist leer`);
+  }
+  assert.equal(liste('frontWalk'), 4);
+  assert.equal(liste('backWalk'), 4);
 });
 
-test('Alle frontalen Bilder liegen wirklich im Atlas', () => {
+test('Alle Front- und Rueckansichten liegen wirklich im Atlas', () => {
   const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
   const block = src.slice(src.indexOf('const ANIM_FRAMES'), src.indexOf('const FRONT_SET'));
-  const namen = [...block.matchAll(/'(f(?:ront|run|prowl)\d)'/g)].map((m) => m[1]);
-  assert.ok(namen.length >= 11, `nur ${namen.length} frontale Bilder verdrahtet`);
+  const namen = [...block.matchAll(/'((?:front|frun|back|brun)\d)'/g)].map((m) => m[1]);
+  assert.ok(namen.length >= 11, `nur ${namen.length} Tiefen-Bilder verdrahtet`);
   for (const n of namen) {
-    assert.ok(atlas.frames[n], `${n} fehlt im Atlas -- tools/make_front.py + pack_atlas.py laufen lassen`);
+    assert.ok(atlas.frames[n], `${n} fehlt im Atlas -- cut_sprites.py + pack_atlas.py laufen lassen`);
   }
 });
 
@@ -552,9 +556,30 @@ test('Frontale und seitliche Bilder stehen gleich hoch', () => {
   // Sonst waechst oder schrumpft der Hund beim Richtungswechsel sichtbar.
   const h = (n) => atlas.frames[n].frame.h;
   const profil = ['walk0', 'walk1', 'walk2', 'walk3', 'walk4'].map(h);
-  const front = ['front0', 'front1', 'front2', 'front3', 'front4'].map(h);
+  const front = ['front0', 'front1', 'front2', 'front3'].map(h);
   const mp = profil.reduce((a, b) => a + b) / profil.length;
   const mf = front.reduce((a, b) => a + b) / front.length;
   assert.ok(Math.abs(mf - mp) / mp < 0.06,
     `Hoehen weichen ${((mf - mp) / mp * 100).toFixed(0)} % ab (${mp.toFixed(0)} vs ${mf.toFixed(0)})`);
+});
+
+test('⚠️ Der getragene Knochen haengt an der Ansicht', () => {
+  // Von hinten liegt er auf der abgewandten Seite und darf gar nicht
+  // erscheinen; seitlich versetzt wuerde er neben dem Hund schweben.
+  const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8')
+    .replace(/\/\*[\s\S]*?\*\//g, '').replace(/(^|[^:])\/\/.*$/gm, '$1');
+  const block = src.slice(src.indexOf('if (p.carrying)'), src.indexOf('drawBone('));
+  assert.match(block, /ansicht !== 'back'/, 'von hinten wird der Knochen gezeigt');
+  assert.match(block, /ansicht === 'front' \? 0/, 'von vorn haengt er seitlich statt mittig');
+});
+
+test('Das Ausstiegsfenster der Ansicht ist weit genug fuer Rempler', () => {
+  // Im Gedraenge schiebt die Trennung der Hunde den Laeufer seitwaerts:
+  // gemessen fiel depth von 0,74 auf 0,37. Bei zu engem Fenster kippt die
+  // Ansicht dabei zurueck ins Profil und flackert.
+  const src = fs.readFileSync(path.join(CLIENT, 'src/render.js'), 'utf8');
+  const ein = Number(src.match(/FRONT_EIN = ([\d.]+)/)[1]);
+  const aus = Number(src.match(/FRONT_AUS = ([\d.]+)/)[1]);
+  assert.ok(aus < 0.4, `Austritt bei ${aus} -- ein Rempler auf 0,37 kippt zurueck`);
+  assert.ok(ein - aus >= 0.25, `Fenster nur ${(ein - aus).toFixed(2)} breit`);
 });

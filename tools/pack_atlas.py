@@ -17,11 +17,12 @@ SRC  = os.path.join(HERE, "..", "build", "frames")
 OUT  = os.path.join(HERE, "..", "client", "public", "assets")
 
 DOG, FACE, BONE = 0.50, 0.22, 0.80
-# Die frontalen Bilder (tools/make_front.py) sind 1,09x hoeher als die
-# Profilbilder, weil der aufgesetzte Kopf ueber die Schultern ragt. Mit eigener
-# Skala stehen beide Ansichten gleich hoch -- sonst wuechse der Hund beim
-# Richtungswechsel sichtbar.
-FRONT = 0.46
+# Front- und Rueckansichten kommen aus einem eigenen Blatt mit GROESSEREN
+# Zellen (600x597 statt 688x384), die Rohbilder sind deshalb rund 500 px hoch
+# statt 307. Eigene Skala, damit der Hund in allen Ansichten gleich hoch steht
+# -- sonst wuechse er beim Richtungswechsel sichtbar.
+# Gerechnet, nicht geraten: 307 * 0,50 / 500.
+FB = 0.307
 
 # (Quell-Key, Spielname, Skala, dy)  dy in ZIEL-Pixeln, positiv = nach unten
 CATALOG = [
@@ -49,19 +50,21 @@ CATALOG = [
     ("s1_r3c1",  "sleep1",     DOG,  0),
     ("v3_r0c0",  "sit",        DOG,  0),
     # HUD + Gegenstand
-    # Frontale Ansichten (zusammengesetzt, s. tools/make_front.py) -- nur fuer
-    # die Bewegung AUF den Betrachter zu.
-    ("front0",   "front0",     FRONT, 0),
-    ("front1",   "front1",     FRONT, 0),
-    ("front2",   "front2",     FRONT, 0),
-    ("front3",   "front3",     FRONT, 0),
-    ("front4",   "front4",     FRONT, 0),
-    ("frun0",    "frun0",      FRONT, 0),
-    ("frun1",    "frun1",      FRONT, 0),
-    ("fprowl0",  "fprowl0",    FRONT, 0),
-    ("fprowl1",  "fprowl1",    FRONT, 0),
-    ("fprowl2",  "fprowl2",    FRONT, 0),
-    ("fprowl3",  "fprowl3",    FRONT, 0),
+    # Front- und Rueckansichten (gezeichnetes Blatt lr-front-back.jpg).
+    # Reihenfolge = Kontakt / Durchschwung / Kontakt gespiegelt / Durchschwung.
+    ("fb_r0c0",  "front0",     FB, 0),
+    ("fb_r0c1",  "front1",     FB, 0),
+    ("fb_r0c2",  "front2",     FB, 0),
+    ("fb_r0c3",  "front3",     FB, 0),
+    ("fb_r1c0",  "back0",      FB, 0),
+    ("fb_r1c1",  "back1",      FB, 0),
+    ("fb_r1c2",  "back2",      FB, 0),
+    ("fb_r1c3",  "back3",      FB, 0),
+    ("fb_r2c0",  "frun0",      FB, 0),
+    ("fb_r2c1",  "frun1",      FB, 0),
+    # fb_r2c2 ist eine SEITENansicht statt einer Rueckansicht -- nicht genutzt,
+    # Profile gibt es genug. Der Galopp nach hinten hat daher nur ein Bild.
+    ("fb_r2c3",  "brun0",      FB, 0),
     ("emo_r0c0", "face_happy", FACE, 0),
     ("emo_r1c0", "face_angry", FACE, 0),
     ("prop_bone","bone",       BONE, 0),

@@ -278,54 +278,62 @@ Geprueft von 380 bis 1920 px: 0 Ueberlauf, 0 Kollisionen.
 
 ## Tiefenachse: Laufen nach oben und unten
 
-**Alle fuenf Sprite-Blaetter zeigen den Hund ausschliesslich im PROFIL** — es
-gibt keine Front- und keine Rueckansicht. Beim Laufen nach oben/unten stand
-deshalb dasselbe Seitenbild da: der Hund lief sichtbar quer, waehrend er sich
-senkrecht bewegte.
+Die acht Original-Blätter zeigen Tyson ausschliesslich im PROFIL — beim Laufen
+nach oben/unten stand deshalb dasselbe Seitenbild da. Seit 2026-08-20 gibt es
+ein **gezeichnetes Blatt** `artwork/lr-front-back.jpg` (4x3, erzeugt nach
+`docs/neue-sprites.md`) mit echten Front- und Rueckansichten:
 
-⚠️ **Die zusammengesetzten Frontalbilder sind ABGESCHALTET** (Nutzerentscheid
-2026-08-19: „gefallen mir nicht"). `FRONT_SET = {}` in `render.js` ist der
-einzige Schalter — ein Eintrag dort holt sie zurueck, Bilder und Generator
-bleiben erhalten. Was BLEIBT: die verkuerzte Silhouette und die
-Tiefenskalierung (s. unten) — die Richtung ist weiter ablesbar, nur ohne
-Gesicht von vorn. Ein Test pinnt den Schalter, damit ein Wiedereinschalten
-bewusst geschieht.
+    front0..3   Gehen auf den Betrachter zu
+    back0..3    Gehen von ihm weg
+    frun0..1    Galopp auf ihn zu
+    brun0       Galopp weg -- nur EIN Bild, s. u.
 
-**Wie sie gebaut waren** (`tools/make_front.py`, 11 Bilder): vom Profil den rechten Teil (Kopf + Hals) abschneiden, den Rumpf auf
-58 % stauchen — die gestauchten Flanken lesen sich als Brust — und den
-**frontalen Kopf aus dem Emotionsblatt** (`emo_r0c0`) daraufsetzen. Die Beine
-kommen aus dem Profilzyklus und behalten damit ihren Takt. Kein Ersatz fuer
-gezeichnete Frontal-Laufbilder, aber es liest sich als Richtung.
+Umgeschaltet wird ueber `st.ansicht` (`'profil' | 'front' | 'back'`) aus dem
+Vorzeichen von `depth`. Dazwischen bleibt die verkuerzte Silhouette
+(`FORE_MIN` 0,42) und die Tiefenskalierung (+-6 %).
 
-⚠️ **Nur fuer die Bewegung ZUM Betrachter.** Es gibt keine Rueckansicht, und
-ein Gesicht beim Weglaufen waere grob falsch — dort bleibt das gestauchte
-Profil (man sieht ohnehin kein Gesicht). Gepinnt.
+⚠️ **Das Hysteresefenster muss WEIT sein.** Eintritt 0,62 (~60 Grad zur
+Waagerechten), Austritt erst 0,34 (~27 Grad). Im Gedraenge schiebt die Trennung
+der Hunde den Laeufer seitwaerts — live gemessen fiel `depth` dabei von 0,74 auf
+0,37; mit dem urspruenglichen Austritt bei 0,42 kippte die Ansicht bei jedem
+Rempler zurueck ins Profil.
 
-⚠️ **Eigene Skala `FRONT` = 0,46** statt `DOG` = 0,50: der aufgesetzte Kopf ragt
-ueber die Schultern, die Bilder sind dadurch 1,09x hoeher. Ohne eigene Skala
-wuechse der Hund beim Richtungswechsel sichtbar.
+⚠️ **An der gezeichneten Ansicht darf weder gespiegelt noch verkuerzt werden**
+(`face = 1`): sie zeigt die Tiefe bereits, Stauchen wuerde sie ein zweites Mal
+verkuerzen. Ebenso faellt die Vorlage (`rot`) weg — sie zeigt nach vorn auf dem
+Schirm, und dort gibt es kein Vorn.
 
-⚠️ **Jede frontale Reihe hat so viele Bilder wie ihr Profil-Gegenstueck** — die
-Schrittphase ist ein Bruchteil des Zyklus, bei ungleichen Laengen spraengen
-beim Ansichtswechsel die Beine.
+⚠️ **Der Galopp streckt sich in FLUGRICHTUNG.** Seitlich ist das waagerecht; an
+der Front-/Rueckansicht zeigt die Flugrichtung in die Tiefe, dort macht dieselbe
+Streckung den Hund breit und platt (im Bild als Klumpen nachgeprueft). Dort wird
+er stattdessen hoeher.
 
-⚠️ **Der Galopp streckt sich in FLUGRICHTUNG.** Seitlich ist das waagerecht;
-frontal zeigt die Flugrichtung in die Tiefe, dort macht dieselbe Streckung den
-Hund breit und platt (im Bild nachgeprueft: der springende Hund war ein
-Klumpen). Frontal wird er stattdessen hoeher.
+⚠️ **Der getragene Knochen haengt an der Ansicht.** Von hinten liegt er auf der
+abgewandten Seite und wird gar nicht gezeichnet; von vorn sitzt er mittig unter
+der Schnauze statt seitlich (seitlich versetzt schwebte er neben dem Hund).
 
-**Zwischen den Ansichten** liegt die verkuerzte Silhouette: `vert` (0 = quer,
-1 = senkrecht) staucht das Profil bis auf `FORE_MIN` = 0,42, `depth` skaliert
-+-6 % (weg = kleiner, her = groesser). Umgeschaltet wird mit **Hysterese**
-(ein 0,62 / aus 0,42), sonst springt die Ansicht bei leicht schraegem Lauf
-mehrmals je Sekunde.
+⚠️ **Vier Gehbilder statt fuenf sind richtig so.** Die Schrittphase ist ein
+BRUCHTEIL des Zyklus, kein Bildindex — vier Bilder decken je 25 % ab statt 20 %,
+der Zyklus bleibt gleich lang. Ein frueherer Test pinnte gleiche Bildzahl wie
+beim Profil; das war zu streng und schlicht falsch.
 
-⚠️ **Das Verhaeltnis NICHT je Bild ausrechnen.** Der eigene Hund wird nur im
-Servertakt (30 Hz) fortgeschrieben, gezeichnet wird mit bis zu 144 fps — auf
-zwei von drei Bildern ist die Strecke exakt **0**. Ein je Bild gebildetes
-Verhaeltnis wird staendig gegen null gezogen: gemessen kamen bei reiner
-Senkrechtbewegung **0,28** heraus statt 1,0. Stattdessen die ACHSEN einzeln
-mitteln — die Nullbilder treffen beide gleich und kuerzen sich heraus.
+⚠️ **Eigene Atlas-Skala `FB` = 0,307** (statt `DOG` = 0,50): das neue Blatt hat
+groessere Zellen (600x597 statt 688x384), die Rohbilder sind rund 500 px hoch
+statt 307. Gerechnet, nicht geraten: 307 * 0,50 / 500. Ohne eigene Skala wuechse
+der Hund beim Richtungswechsel sichtbar.
+
+⚠️ **Das Verhaeltnis senkrecht/quer NICHT je Bild ausrechnen.** Der eigene Hund
+wird nur im Servertakt (30 Hz) fortgeschrieben, gezeichnet wird mit bis zu
+144 fps — auf zwei von drei Bildern ist die Strecke exakt **0**. Ein je Bild
+gebildetes Verhaeltnis wird staendig gegen null gezogen: gemessen kamen bei
+reiner Senkrechtbewegung **0,28** heraus statt 1,0. Stattdessen die ACHSEN
+einzeln mitteln — die Nullbilder treffen beide gleich und kuerzen sich heraus.
+
+**Zur Herkunft des Blatts:** eine Zelle (r2c2) kam als Seitenansicht statt als
+Rueckansicht und wird nicht genutzt — deshalb hat `backRun` nur ein Bild. Ein
+frueherer Versuch, Frontalbilder aus vorhandenen Teilen ZUSAMMENZUSETZEN
+(Profilkopf abschneiden, Rumpf stauchen, frontalen Kopf daraufsetzen), wurde
+vom Nutzer verworfen und ist mit `tools/make_front.py` entfernt worden.
 
 ## Grafik
 
@@ -353,7 +361,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 61 Tests (node --test)
-cd client && npm test                                  # 74 Tests (Eingabe, Animation, Zeiger, Meta)
+cd client && npm test                                  # 76 Tests (Eingabe, Animation, Zeiger, Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
@@ -361,8 +369,8 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**135 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
-`verbs` 10), Client 74 (`input` 13 · `anim` 36 · `pointer` 17 · `meta` 8). Der Client testet mit einem
+**137 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 76 (`input` 13 · `anim` 38 · `pointer` 17 · `meta` 8). Der Client testet mit einem
 **handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
 
 ⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —
@@ -380,7 +388,6 @@ Grafik neu erzeugen (nur bei Änderungen in `artwork/`, braucht Pillow + ImageMa
 
 ```bash
 python3 tools/cut_sprites.py && python3 tools/cut_props.py
-python3 tools/make_front.py      # frontale Laufbilder zusammensetzen
 python3 tools/pack_atlas.py
 python3 tools/make_og.py       # Teilbild client/public/og.png (1200x630)
 ```

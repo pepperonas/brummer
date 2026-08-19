@@ -22,28 +22,30 @@ const ANIM_FRAMES = {
   sniff:   ['sniff'],
   dig:     ['sniff'],
   stunned: ['sleep0'],
-  // Frontale Ansichten (tools/make_front.py): gleiche Bildzahl wie ihre
-  // Profil-Gegenstuecke, damit die Schrittphase unveraendert weiterlaeuft.
-  frontWalk:  ['front0', 'front1', 'front2', 'front3', 'front4'],
-  frontRun:   ['frun0', 'frun1'],
-  frontProwl: ['fprowl0', 'fprowl1', 'fprowl2', 'fprowl3'],
+  // Gezeichnete Front- und Rueckansichten (Blatt lr-front-back.jpg).
+  // Vier Gehbilder statt fuenf: die Schrittphase ist ein BRUCHTEIL des Zyklus,
+  // kein Bildindex -- der Zyklus bleibt gleich lang, die Beine im Takt.
+  frontWalk: ['front0', 'front1', 'front2', 'front3'],
+  frontRun:  ['frun0', 'frun1'],
+  backWalk:  ['back0', 'back1', 'back2', 'back3'],
+  // ⚠️ Nur EIN Bild: die vierte Galopp-Zelle des Blatts kam als Seitenansicht
+  // statt als Rueckansicht. Die Bewegung traegt hier der Flugbogen.
+  backRun:   ['brun0'],
 };
 
-/**
- * Welcher Zustand hat eine frontale Fassung?
- *
- * ⚠️ AUS auf Nutzerentscheid (2026-08-19): die zusammengesetzten Frontalbilder
- * (aufgesetzter Kopf, s. tools/make_front.py) haben nicht ueberzeugt. Die
- * Bilder bleiben im Atlas und der Generator im Repo -- ein leeres Objekt hier
- * schaltet sie ab, ein Eintrag wieder an. Ohne sie bleibt es beim VERKUERZTEN
- * Profil: die Richtung ist weiter ablesbar (Silhouette bis 42 %, Groesse +-6 %),
- * nur ohne Gesicht von vorn.
- */
-const FRONT_SET = {};
+// Welcher Zustand hat eine gezeichnete Ansicht auf der Tiefenachse?
+// Tragen nutzt die Gehbilder -- einen eigenen Schleichgang von vorn gibt es
+// nicht, und ein Rueckfall ins Profil mitten im Lauf faellt mehr auf.
+const FRONT_SET = { walk: 'frontWalk', prowl: 'frontWalk', run: 'frontRun' };
+const BACK_SET  = { walk: 'backWalk',  prowl: 'backWalk',  run: 'backRun' };
 // Hysterese: einmal drin, bleibt es laenger -- sonst flackert die Ansicht,
 // wenn man schraeg laeuft und der Wert um die Schwelle pendelt.
+// Eintritt bei ~60 Grad zur Waagerechten, Austritt erst unter ~27 Grad.
+// ⚠️ Das Fenster muss WEIT sein: im Gedraenge schiebt die Trennung der Hunde
+// den Laeufer seitwaerts, gemessen fiel `depth` dabei von 0,74 auf 0,37 --
+// mit einem engeren Fenster kippt die Ansicht bei jedem Rempler zurueck.
 const FRONT_EIN = 0.62;
-const FRONT_AUS = 0.42;
+const FRONT_AUS = 0.34;
 // Bildrate nur noch fuer Posen OHNE Fortbewegung. Alles, was laeuft, haengt an
 // der zurueckgelegten STRECKE (s. STRIDE) -- eine feste Bildrate loest die Beine
 // vom Boden, sobald das Tempo nicht exakt zum Takt passt ("foot sliding").
@@ -221,7 +223,7 @@ export class Renderer {
              px: null, py: null, speed: 0, prevSpeed: 0, accel: 0,
              face: null,                       // stufenlose Blickrichtung -1..+1
              vert: 0, depth: 0, emx: 0, emy: 0,  // Tiefenbewegung (Achsen einzeln gemittelt)
-             frontal: false,                    // zeigt gerade die frontale Fassung
+             ansicht: 'profil',                 // 'profil' | 'front' | 'back'
              biteT: -1, wasBite: false, pushed: false,
              barkT: -1, wasBark: false,
              stunT: -1, wasStun: false,
@@ -434,12 +436,20 @@ export class Renderer {
     if (!getroffen) st.stunT = -1;
 
     // --- Fortbewegung: Phase folgt der Strecke -----------------------------
-    // Laeuft der Hund auf den Betrachter zu, gibt es echte frontale Bilder --
-    // sonst stuende beim Laufen nach unten das Seitenbild da.
-    st.frontal = st.depth > (st.frontal ? FRONT_AUS : FRONT_EIN);
-    const frontal = st.frontal && FRONT_SET[p.anim] !== undefined;
-    const list = frontal ? ANIM_FRAMES[FRONT_SET[p.anim]]
-                         : (ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle);
+    // Ansicht auf der Tiefenachse, mit Hysterese: einmal gewechselt, bleibt es
+    // laenger -- sonst springt das Bild bei leicht schraegem Lauf mehrmals je
+    // Sekunde hin und her.
+    if (st.ansicht === 'front')     { if (st.depth <  FRONT_AUS) st.ansicht = 'profil'; }
+    else if (st.ansicht === 'back') { if (st.depth > -FRONT_AUS) st.ansicht = 'profil'; }
+    else if (st.depth >  FRONT_EIN) { st.ansicht = 'front'; }
+    else if (st.depth < -FRONT_EIN) { st.ansicht = 'back'; }
+
+    const satz = st.ansicht === 'front' ? FRONT_SET[p.anim]
+               : st.ansicht === 'back'  ? BACK_SET[p.anim]
+               : undefined;
+    const direkt = satz !== undefined;          // gezeichnete Front-/Rueckansicht
+    const list = direkt ? ANIM_FRAMES[satz]
+                        : (ANIM_FRAMES[p.anim] || ANIM_FRAMES.idle);
     const stride = STRIDE[p.anim];
     const vorher = st.ph;
     if (stride) st.ph += dist / stride;
@@ -457,10 +467,10 @@ export class Renderer {
         const sammeln = Math.max(0, Math.sin(u * 2 * Math.PI));         // 1. Haelfte
         zLift   = -(5 + 11 * kraft) * flug;
         // ⚠️ Seitlich streckt sich der Koerper in FLUGRICHTUNG, also waagerecht.
-        // Am frontalen Bild zeigt die Flugrichtung in die Tiefe -- dort waere
+        // An der Front-/Rueckansicht zeigt die Flugrichtung in die Tiefe -- dort waere
         // eine waagerechte Streckung schlicht falsch und macht den Hund breit
         // und platt. Frontal wird er stattdessen hoeher.
-        zSquash = frontal
+        zSquash = direkt
           ? 1 + 0.07 * kraft * flug
           : 1 - 0.11 * kraft * flug + 0.05 * kraft * sammeln;
         zRot    = (0.05 + 0.055 * kraft) * p.facing;                    // Vorlage ins Tempo
@@ -523,7 +533,7 @@ export class Renderer {
       // Auf-und-ab-Anteil wird dafuer kraeftiger: ein Hund, der auf dich
       // zulaeuft, zeigt mehr Koerperhub als einer, der quer vorbeizieht.
       if (p.anim === 'run' || p.anim === 'walk' || p.anim === 'prowl') {
-        zRot  *= frontal ? 0 : 1 - st.vert * 0.85;
+        zRot  *= direkt ? 0 : 1 - st.vert * 0.85;
         zLift *= 1 + st.vert * 0.45;
       }
 
@@ -607,15 +617,17 @@ export class Renderer {
     const seite = st.face >= 0 ? 1 : -1;
     const gedreht = Math.max(TURN_MIN, Math.abs(st.face));
     // Verkuerzung der Tiefenbewegung kommt OBENDRAUF -- beides sind Breiten.
-    // ⚠️ Am frontalen Bild darf NICHTS davon wirken: es ist bereits frontal,
-    // Spiegeln waere sinnlos und Stauchen wuerde es ein zweites Mal verkuerzen.
+    // ⚠️ An der gezeichneten Front-/Rueckansicht darf NICHTS davon wirken: sie
+    // zeigt die Tiefe bereits, Spiegeln waere sinnlos und Stauchen wuerde sie
+    // ein zweites Mal verkuerzen.
     const fore = 1 - st.vert * (1 - FORE_MIN);
-    const face = frontal ? 1 : seite * gedreht * fore;
+    const face = direkt ? 1 : seite * gedreht * fore;
     // Weg vom Betrachter = kleiner, auf ihn zu = groesser.
     const scale = 1 + st.depth * DEPTH_GAIN;
 
     return { name, lift: st.lift, squash: st.squash, rot: st.rot, dx: st.dx,
-             air: -st.lift, face, scale, turning: dreht, vert: st.vert, depth: st.depth };
+             air: -st.lift, face, scale, turning: dreht, vert: st.vert, depth: st.depth,
+             ansicht: st.ansicht };
   }
 
   drawDog(p, dt) {
@@ -646,8 +658,15 @@ export class Renderer {
       const f = this.frame('bone');
       // Der Knochen haengt am Maul, also folgt er dem Schwenk mit -- sonst
       // steht er neben dem Hund, waehrend der sich dreht.
-      if (f) this.drawSprite('bone', p.x + v.face * 52, p.y - 52,
-                             { scale: 0.85, dx: v.dx, lift: v.lift });
+      // ⚠️ Von HINTEN ist er nicht zu sehen (er liegt auf der abgewandten
+      // Seite); seitlich versetzt wuerde er neben dem Hund schweben. Von VORN
+      // sitzt er mittig unter der Schnauze, nicht seitlich.
+      if (f && v.ansicht !== 'back') {
+        const seitlich = v.ansicht === 'front' ? 0 : v.face * 52;
+        const tiefer = v.ansicht === 'front' ? -34 : -52;
+        this.drawSprite('bone', p.x + seitlich, p.y + tiefer,
+                        { scale: 0.85, dx: v.dx, lift: v.lift });
+      }
     }
   }
 

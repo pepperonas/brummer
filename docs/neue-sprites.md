@@ -1,6 +1,11 @@
 # Neue Sprites für Tyson erzeugen (Nano Banana 2)
 
-Was fehlt: **Front- und Rückansicht**. Alle acht Original-Blätter zeigen Tyson
+> ✅ **Erledigt am 2026-08-20.** Das Blatt liegt als `artwork/lr-front-back.jpg`
+> im Repo und ist verdrahtet. Diese Seite bleibt als Protokoll und als Vorlage
+> für den nächsten Satz stehen; was beim echten Lauf herauskam, steht unten
+> unter „Ergebnis".
+
+Was fehlte: **Front- und Rückansicht**. Alle acht Original-Blätter zeigen Tyson
 ausschließlich im Profil, deshalb steht beim Laufen nach oben und unten dasselbe
 Seitenbild da. Alles Übrige (Gehen, Galopp, Beißen, Bellen, Schnüffeln, Graben,
 Schlafen) ist vorhanden und braucht nichts.
@@ -176,3 +181,38 @@ Ein erster Versuch, frontale Bilder aus vorhandenen Teilen **zusammenzusetzen**
 (`tools/make_front.py`: Kopf des Profils abschneiden, Rumpf stauchen, frontalen
 Kopf daraufsetzen), ist gebaut, getestet — und auf Nutzerentscheid abgeschaltet.
 Der Generator bleibt im Repo, `FRONT_SET = {}` ist der einzige Schalter.
+
+---
+
+## 6. Ergebnis des Laufs (2026-08-20)
+
+Das gelieferte Blatt war **2400×1792**, also 4:3 mit Zellen von 600×597 —
+technisch sehr sauber:
+
+| Prüfpunkt | Ergebnis |
+|---|---|
+| Raster | geht exakt auf |
+| Hintergrund | `#B6D8BE`, Ecken einheitlich |
+| Randabstand | mindestens 24 px, nichts angeschnitten |
+| Bodenlinie | Zeile 0: **0 px** Streuung, Zeile 1: 2 px, Zeile 2: 6 px |
+| Größen | 484–512 px, 5,5 % Streuung |
+| Freistellung | keine Löcher, saubere Kanten |
+
+**Elf von zwölf Zellen waren brauchbar.** Die Ausnahme: `r2c2` kam als
+*Seitenansicht* statt als Rückansicht (528 px breit statt ~340) — deshalb hat
+der Galopp nach hinten nur ein Bild. Beim nächsten Mal hilft es, für Zeile 3
+ausdrücklich zu schreiben: *„all four cells show the dog from the FRONT or from
+BEHIND — never from the side"*.
+
+Die Anweisung **„no face"** für die Rückansichten hat gegriffen: alle vier
+Zellen zeigen den Hund korrekt von hinten mit erhobener Rute.
+
+**Was danach im Spiel zu tun war** (falls ein zweiter Satz kommt):
+
+* eigene Atlas-Skala, weil die neuen Zellen größer sind als die alten
+  (`FB = 0,307`, gerechnet als `307 × 0,50 ÷ 500`),
+* Hysterese weiten (Austritt 0,42 → 0,34): im Gedränge schiebt die Trennung der
+  Hunde den Läufer seitwärts, `depth` fiel dabei von 0,74 auf 0,37 und die
+  Ansicht kippte bei jedem Rempler zurück,
+* den getragenen Knochen an die Ansicht koppeln — von hinten gar nicht zeichnen,
+  von vorn mittig unter die Schnauze statt seitlich.

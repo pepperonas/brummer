@@ -25,6 +25,9 @@ SHEETS = [
     ("lr-sprite-v2-optimized.jpg", 4, 4, "v2"),
     ("lr-sprite-v3-optimized.jpg", 4, 4, "v3"),
     ("lr-emo-sprite-optimized.jpg", 4, 2, "emo"),
+    # Front- und Rueckansichten (2026-08-20 erzeugt, s. docs/neue-sprites.md).
+    # 4 Spalten x 3 Zeilen: Gehen vorn, Gehen hinten, Galopp.
+    ("lr-front-back.jpg", 4, 3, "fb"),
 ]
 
 GUIDE = 3        # px, Hilfslinien-Rand pro Zelle wegschneiden
