@@ -3,14 +3,60 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
-<title>Brummer</title>
-<meta name="description" content="Knochenjagd-Arena mit Tyson. Sammeln, tragen, beißen — wer die meisten Knochen heimbringt, gewinnt.">
+
+<title>Brummer — Knochenjagd-Arena für 2–8 Spieler</title>
+<meta name="description" content="Kostenloses Browser-Arenaspiel: Knochen holen, heimbringen, Gegner wegbeißen. 2–8 Hunde, drei Minuten pro Runde, kein Konto und keine Installation nötig.">
+<link rel="canonical" href="https://brummer.celox.io/">
 <meta name="theme-color" content="#131815">
+<meta name="color-scheme" content="dark">
+
 <link rel="icon" href="/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icon-192.png">
 <link rel="manifest" href="/manifest.webmanifest">
-<meta property="og:title" content="Brummer">
-<meta property="og:description" content="Knochenjagd-Arena mit Tyson. 2–8 Hunde, drei Minuten, ein Knochen im Maul.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Brummer">
+
+<!-- Teilen. og:image MUSS absolut sein -- Scraper loesen relative Pfade nicht auf. -->
+<meta property="og:site_name" content="Brummer">
+<meta property="og:title" content="Brummer — Knochenjagd-Arena für 2–8 Spieler">
+<meta property="og:description" content="Knochen holen. Heimbringen. Wer dir in die Quere kommt, wird gebissen. Drei Minuten pro Runde, ohne Konto.">
 <meta property="og:type" content="website">
+<meta property="og:url" content="https://brummer.celox.io/">
+<meta property="og:locale" content="de_DE">
+<meta property="og:image" content="https://brummer.celox.io/og.png">
+<meta property="og:image:secure_url" content="https://brummer.celox.io/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Der schwarze Hund Tyson rennt über eine Wiese, daneben liegen Knochen. Schriftzug „Brummer“.">
+
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Brummer — Knochenjagd-Arena für 2–8 Spieler">
+<meta name="twitter:description" content="Knochen holen. Heimbringen. Wer dir in die Quere kommt, wird gebissen. Drei Minuten pro Runde, ohne Konto.">
+<meta name="twitter:image" content="https://brummer.celox.io/og.png">
+<meta name="twitter:image:alt" content="Der schwarze Hund Tyson rennt über eine Wiese, daneben liegen Knochen. Schriftzug „Brummer“.">
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoGame",
+  "name": "Brummer",
+  "url": "https://brummer.celox.io/",
+  "description": "Browser-Arenaspiel für 2–8 Spieler: Knochen sammeln, zur eigenen Hütte tragen und Gegner wegbeißen. Eine Runde dauert drei Minuten.",
+  "image": "https://brummer.celox.io/og.png",
+  "inLanguage": "de",
+  "genre": ["Arcade", "Multiplayer"],
+  "playMode": ["MultiPlayer", "SinglePlayer"],
+  "numberOfPlayers": { "@type": "QuantitativeValue", "minValue": 2, "maxValue": 8 },
+  "applicationCategory": "Game",
+  "gamePlatform": "Web Browser",
+  "operatingSystem": "Any",
+  "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR" },
+  "author": { "@type": "Person", "name": "Martin Pfeffer", "url": "https://celox.io" }
+}
+</script>
+
 <link rel="stylesheet" href="/src/style.css">
 </head>
 <body>

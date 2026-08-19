@@ -6,7 +6,8 @@ HOST=${HOST:-root@69.62.121.168}
 DIR=/opt/brummer
 
 echo "==> Tests"
-( cd server && npm test --silent >/dev/null ) && echo "    Suite gruen"
+( cd server && npm test --silent >/dev/null ) && echo "    Server gruen"
+( cd client && npm test --silent >/dev/null ) && echo "    Client gruen"
 
 echo "==> Client bauen"
 ( cd client && npm run build >/dev/null )

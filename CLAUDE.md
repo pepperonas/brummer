@@ -119,6 +119,20 @@ Aufwärmphase, wer eine erwartet, sucht vergeblich.
 
 ## Fallen, in die ich schon getappt bin
 
+**Der Tasten-Handler hängt am Fenster und fraß jede Eingabe.** `input.js`
+ruft für die Spieltasten `preventDefault()` — ohne Tor gilt das auch im
+Namens- und im Code-Feld. Der Nutzer konnte seinen Hund nicht „Tyson" nennen
+(das `s` ist die Lauftaste, es kam „Ty" heraus, so steht es in der
+Bestenliste), und weil das Code-Alphabet `ABCDEFGHJKMNPQRSTUVWXYZ23456789`
+**alle sieben** Buchstabentasten enthält — A D E F Q S W — ließen sich
+**64 % der vierstelligen Arena-Codes gar nicht eintippen**: „Mit Freunden
+spielen" war für zwei von drei Codes tot. Dazu verschluckte der Handler
+`Cmd+W`. Fix: `isTypingTarget()` (INPUT/TEXTAREA/SELECT/contentEditable) und
+ein Modifier-Tor ganz vorn im `keydown`. ⚠️ **`keyup` NICHT toren** — wer
+beim Loslassen gerade ins Feld geklickt hat, behielte sonst eine ewig
+gedrückte Taste. Gepinnt in `client/test/input.test.mjs` (Mutationsprobe:
+ohne das Tor fallen 4 der 7 Prüfungen).
+
 **`[hidden]` verliert gegen explizites `display`.** `#menu`, `#over` und
 `#touch` setzen `display: grid` — ohne die Regel `[hidden]{display:none
 !important}` ganz oben in `style.css` bleibt das Rundenende-Overlay dauerhaft
@@ -175,23 +189,45 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 
 ```bash
 cd server && npm test                                  # 41 Tests (node --test)
+cd client && npm test                                  # 15 Tests (Eingabe-Tor, Teilbild/Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
 cd server && npm start                                 # Port 4263, DATA_DIR=./data
 cd client && npm run dev                               # Port 5180, leitet /api + /ws weiter
-./deploy.sh                                            # Tests -> Build -> rsync -> Neustart -> Probe
+./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-Tests liegen **nur** im Server (`sim` 15 · `room` 19 · `db` 7); `cd client && npm test`
-läuft ins Leere, es gibt kein `client/test/`. Browser-Prüfungen laufen von Hand:
-`window.__br` gibt Zugriff auf `net`, `renderer` und `input` — darüber wurden
-Drift, Kamera und Ereignisse gemessen.
+**56 Tests**: Server 41 (`sim` 15 · `room` 19 · `db` 7), Client 15
+(`input` 7 · `meta` 8). Der Client testet mit einem **handgerollten
+DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei. Browser-Prüfungen
+laufen von Hand: `window.__br` gibt Zugriff auf `net`, `renderer` und `input` —
+darüber wurden Drift, Kamera, Ereignisse und das Eingabe-Tor gemessen.
 
 Grafik neu erzeugen (nur bei Änderungen in `artwork/`, braucht Pillow + ImageMagick):
 
 ```bash
 python3 tools/cut_sprites.py && python3 tools/cut_props.py && python3 tools/pack_atlas.py
+python3 tools/make_og.py       # Teilbild client/public/og.png (1200x630)
 ```
+
+**Teilbild.** `make_og.py` malt den Boden mit demselben Verfahren und Startwert
+wie `render.js` (`_makeGround`, Grundfarbe `#4a7a44`, Seed 1337) und schneidet
+Hund und Knochen aus dem echten Atlas — das Bild sieht deshalb aus wie das
+Spiel. Drei Dinge kosteten dabei Zeit:
+
+* **Kontrast auf dem GRUND messen, nicht im fertigen Bild.** Der erste Prüflauf
+  meldete durchweg 1,0:1, weil der hellste Punkt im Textkasten der Titel selbst
+  war. Gemessen wird jetzt vor dem Satz, gegen den hellsten Bildpunkt im Kasten.
+* **Schnitte über den Namen wählen, nicht über den Index.** Geratene `.ttc`-
+  Indizes trafen „Regular"; „Heavy" liegt in derselben Datei auf 8.
+* **Was hell ist, nachschlagen statt raten.** Zwei Fehlschläge waren der Knochen
+  im Maul und der Kopf des Hundes unter dem Titel — beide erst durch Ausgeben
+  der Koordinate des hellsten Punkts gefunden.
+
+Die Meta-Angaben sind in `client/test/meta.test.mjs` gepinnt: `og:image`
+**absolut** (Scraper lösen relative Pfade nicht auf), die angegebene Bildgröße
+gegen den echten PNG-Kopf, `summary_large_image`, Bildbeschreibungen, gültiges
+JSON-LD und dass im Kopf kein alter Hostname mehr steht.
 
 **Ausrollen** (Details in `DEPLOY.md`): `deploy.sh` spiegelt `server/` **ohne**
 `test/` und `public/`, legt den Client-Build nach `server/public/` und `shared/`

@@ -3,6 +3,22 @@
 // ihn nachzuruesten hiesse, die halbe Eingabeschicht neu zu schreiben.
 import { BTN } from '../../shared/sim.js';
 
+/**
+ * Tippt der Spieler gerade in ein Feld?
+ *
+ * Der Tasten-Handler haengt am FENSTER und verschluckt die Spieltasten per
+ * preventDefault. Ohne dieses Tor frisst er sie auch im Namens- und im
+ * Code-Feld: "Tyson" wurde zu "Tyon", und weil das Code-Alphabet
+ * (ABCDEFGHJKMNPQRSTUVWXYZ23456789) ALLE sieben Buchstabentasten enthaelt
+ * -- A D E F Q S W -- liessen sich 64 % der Arena-Codes gar nicht eingeben.
+ * Leerzeichen im Namen ebenso wenig.
+ */
+export function isTypingTarget(el) {
+  if (!el) return false;
+  const tag = el.tagName;
+  return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable === true;
+}
+
 export class Input {
   constructor(canvas) {
     this.canvas = canvas;
@@ -12,11 +28,17 @@ export class Input {
     this.onPause = null;
 
     addEventListener('keydown', e => {
+      // Das Textfeld gewinnt immer -- sonst frisst der Handler die Eingabe.
+      if (isTypingTarget(e.target)) return;
+      // Cmd+W / Strg+W schliesst den Tab, Cmd+A markiert: nie abfangen.
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.repeat) return;
       if (e.code === 'Escape' && this.onPause) this.onPause();
       if (this._isGameKey(e.code)) e.preventDefault();
       this.keys.add(e.code);
     });
+    // keyup NICHT toren: wer beim Loslassen gerade ins Feld geklickt hat,
+    // haette sonst eine Taste, die fuer immer gedrueckt bleibt.
     addEventListener('keyup', e => this.keys.delete(e.code));
     addEventListener('blur', () => this.keys.clear());
 
