@@ -177,7 +177,10 @@ gibt, die es nicht gibt.
 `tools/make_front.py` kann daraus zusätzlich frontale Laufbilder zusammensetzen
 (Kopf des Profils abschneiden, Rumpf stauchen, frontalen Kopf aus dem
 Emotionsblatt daraufsetzen). Das ist gebaut und getestet, aber **abgeschaltet** —
-ein Zusammenbau ersetzt keine gezeichneten Frontalansichten.
+ein Zusammenbau ersetzt keine gezeichneten Frontalansichten. Wer echte
+Front-/Rückansichten nachliefern will, findet Prompt, Vorgaben und den Weg ins
+Spiel in **[`docs/neue-sprites.md`](docs/neue-sprites.md)**; `tools/build_sheet.py`
+setzt Einzelbilder zu einem pipeline-tauglichen Blatt zusammen.
 
 **Der Atlas ist ohne Dithering quantisiert.** Bei 220 Farben ist kein Unterschied
 zu sehen, die Datei aber ein Viertel so groß (709 → 170 kB). *Mit* Dithering
