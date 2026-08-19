@@ -28,14 +28,11 @@ Kopf und den Körper von vorn. Mehr braucht es nicht.
 
 ---
 
-## 2. Der Prompt
+## 2. Der Prompt — ein Bild, alle Sprites
 
-Eine Pose pro Bild erzeugen — nicht das ganze Raster. Sechzehn zueinander
-konsistente Zellen in einer Generierung schafft kein Bildmodell zuverlässig;
-einzeln wird jede Pose besser, und `tools/build_sheet.py` setzt das Blatt
-danach zusammen.
-
-Englisch, weil Bildmodelle darauf verlässlicher reagieren:
+Ein **4×3-Raster mit zwölf Posen** in einem Bild. Bildformat **4:3** (z. B.
+2048×1536), damit die Zellen quadratisch werden: von vorn ist der Hund hochkant
+(etwa 2:3), nicht breit wie im Profil (1,8:1).
 
 ```
 Using the attached reference sheet: this is Tyson, a black Labrador-Rottweiler
@@ -44,44 +41,66 @@ black outline, simple cel shading with soft grey highlights on black fur, brown
 leather collar with a round silver tag. The RIGHT dog is only a reference for
 front-view anatomy; do NOT copy its painterly rendering.
 
-Draw the SAME dog in the SAME style, seen from directly in FRONT, walking
-toward the viewer — contact pose, left front paw forward and planted, right
-front paw lifted mid-stride, head level and facing the camera, mouth slightly
-open, tail visible behind the body.
+Create ONE sprite sheet image in 4:3 format, arranged as a strict 4-column ×
+3-row grid of 12 equal square cells. Same dog in every cell, identical style,
+identical proportions, identical size, identical camera height (eye level,
+straight on). Only the pose changes.
 
-Requirements:
-- full body, all four legs visible, nothing cropped
-- centred, standing on flat ground, no cast shadow, no ground plane drawn
-- plain flat background, solid colour #B7DAC1, nothing else in the image
-- no text, no borders, no frame, no watermark
-- same line weight and same proportions as the left reference dog
-- square image, dog fills about 70 % of the height
+Row 1 — walking TOWARD the viewer, seen from directly in FRONT, head level and
+facing the camera, mouth slightly open:
+  1. contact pose: left front paw forward and planted, right front paw lifted
+  2. passing pose: front legs close together under the chest, body at its highest
+  3. contact pose mirrored: right front paw forward, left lifted
+  4. passing pose mirrored, weight on the other side
+
+Row 2 — walking AWAY from the viewer, seen from directly BEHIND, tail up, back
+of the head visible over the shoulders, no face:
+  5. contact pose: left hind paw forward and planted, right hind paw lifted
+  6. passing pose: hind legs close together
+  7. contact pose mirrored
+  8. passing pose mirrored
+
+Row 3 — galloping:
+  9.  from the FRONT, bounding toward the viewer, front legs reaching forward,
+      body airborne
+  10. from the FRONT, gathered mid-stride, legs tucked under the body
+  11. from BEHIND, bounding away, hind legs extended back, body airborne
+  12. from BEHIND, gathered mid-stride
+
+Rules for every cell:
+- full body, all four legs visible, nothing cropped or touching a cell edge
+- every dog the same height on screen, all paws resting on the same imaginary
+  ground line within its cell
+- no cast shadow, no ground plane, no scenery
+- plain flat background, solid colour #B7DAC1, identical in every cell
+- no grid lines, no borders, no numbers, no text, no watermark
 ```
 
-**Die drei Stellen, die du je Bild änderst** — alles Übrige bleibt wörtlich
-stehen, das hält den Stil zusammen:
+**Wichtig für Zeile 2:** „no face" steht bewusst da. Bildmodelle drehen den Kopf
+gern zum Betrachter, weil Hunde meist so gezeichnet werden — beim Weglaufen ist
+das grob falsch und fällt im Spiel sofort auf.
 
-| # | Ansicht | Pose (statt des kursiven Absatzes oben) |
-|---|---|---|
-| 1 | vorn | contact pose, left front paw forward and planted, right front paw lifted |
-| 2 | vorn | passing pose, both front legs close together under the chest, body at its highest |
-| 3 | vorn | contact pose mirrored — right front paw forward, left lifted |
-| 4 | vorn | passing pose mirrored, weight on the other side |
-| 5 | hinten | *seen from directly BEHIND, walking away* — contact pose, tail up, head slightly visible over the shoulders |
-| 6 | hinten | passing pose, both hind legs together |
-| 7 | hinten | contact pose mirrored |
-| 8 | hinten | passing pose mirrored |
+**Zwei Vorgaben sind weicher, als sie klingen** (nachgeprüft im Code):
 
-Optional, wenn das Gehen überzeugt — Galopp (je zwei Bilder):
+* Die **Bildgröße** ist frei. `cut_sprites.py` rechnet die Zellgröße aus dem
+  Bild (`Breite ÷ Spalten`), also passt jedes Format — nur das Raster muss
+  stimmen und beim Eintragen richtig angegeben werden.
+* Die **Hintergrundfarbe** wird erkannt (`bg_color()`), `#B7DAC1` ist nur eine
+  Empfehlung. Entscheidend ist, dass sie **flach** ist und sich klar vom Hund
+  abhebt — ein Verlauf bricht die Freistellung, ein Grauton zu nah am Fell
+  ebenfalls.
 
-| # | Ansicht | Pose |
-|---|---|---|
-| 9 | vorn | *bounding toward the viewer*, front legs extended forward, hind legs pushing off, body airborne |
-| 10 | vorn | gathered mid-stride, legs tucked under the body |
-| 11 | hinten | *bounding away*, hind legs extended back, body airborne |
-| 12 | hinten | gathered mid-stride |
+### Wenn das Blatt nicht durchgehend konsistent wird
 
----
+Zwölf zueinander passende Hunde in einer Generierung sind viel verlangt;
+erfahrungsgemäß fallen ein bis drei Zellen aus dem Rahmen. Dann nicht alles neu
+erzeugen, sondern **nur die schlechten Zellen einzeln** nachziehen (derselbe
+Prompt, aber „Create ONE image showing the dog …" und die eine Pose) und mit
+`tools/build_sheet.py` ein sauberes Blatt zusammensetzen — es erzwingt gleiche
+Skala, gemeinsame **Bodenlinie** (der Drehpunkt der Pipeline sind die Pfoten;
+liegen sie unterschiedlich hoch, zappelt der Hund beim Animieren) und Abstand
+zum Zellrand. Aufruf: `python3 tools/build_sheet.py <ordner> <ziel.jpg>
+--zeilen 3 --spalten 4`.
 
 ## 3. Was ein Bild erfüllen muss
 
@@ -106,35 +125,38 @@ Pipeline oder die Animation:
 
 ## 4. Vom Bild ins Spiel
 
-```bash
-# 1. Einzelbilder in einen Ordner legen, alphabetisch = Lesereihenfolge
-#    (01-front-contact.png, 02-front-passing.png, ...)
-python3 tools/build_sheet.py ~/tyson-neu artwork/lr-front-back.jpg --zeilen 2 --spalten 4
+Das fertige Blatt kommt direkt in die Pipeline — `build_sheet.py` brauchst du
+dafür **nicht**, das war der Weg für Einzelbilder.
 
-# 2. Blatt in die SHEETS-Liste von tools/cut_sprites.py eintragen:
-#       ("lr-front-back.jpg", 2, 4, "fb"),
+```bash
+# 1. Blatt ablegen
+cp ~/tyson-front-back.png artwork/lr-front-back.jpg     # oder .png
+
+# 2. In die SHEETS-Liste von tools/cut_sprites.py eintragen -- 4 Spalten, 3 Zeilen:
+#       ("lr-front-back.jpg", 3, 4, "fb"),
 
 # 3. Schneiden und packen
 python3 tools/cut_sprites.py
-python3 tools/pack_atlas.py     # Katalog um fb_r0c0 ... erweitern
+python3 tools/pack_atlas.py     # Katalog um fb_r0c0 ... fb_r2c3 erweitern
 ```
-
-`build_sheet.py` nimmt dir das ab, was die Pipeline sonst nicht verzeiht:
-gemeinsame Skala, gemeinsame **Bodenlinie** (der Drehpunkt sind die Pfoten —
-liegen sie unterschiedlich hoch, zappelt der Hund beim Animieren) und
-Sicherheitsabstand zum Zellrand.
 
 Danach im Renderer eintragen — die Verdrahtung steht bereits:
 
 ```js
 // client/src/render.js
-const FRONT_SET = { walk: 'frontWalk', run: 'frontRun', prowl: 'frontProwl' };
+const FRONT_SET = { walk: 'frontWalk', run: 'frontRun' };
 ```
 
-Die Bildreihen `frontWalk` / `frontRun` / `frontProwl` existieren schon; nur die
-Namen darin auf die neuen Atlas-Frames umstellen. **Jede Reihe muss so viele
-Bilder haben wie ihr Profil-Gegenstück** (Gehen 5, Galopp 2, Tragen 4), sonst
-springen beim Ansichtswechsel die Beine — ein Test pinnt das.
+Die Bildreihen `frontWalk` und `frontRun` existieren schon; nur die Namen darin
+auf die neuen Atlas-Frames umstellen.
+
+> **Vier Gehbilder genügen**, obwohl das Profil fünf hat. Die Schrittphase ist
+> ein *Bruchteil des Zyklus*, kein Bildindex — bei vier Bildern deckt jedes 25 %
+> ab statt 20 %, der Zyklus bleibt gleich lang und die Beine bleiben im Takt.
+> ⚠️ Der Test `Jede frontale Reihe hat so viele Bilder wie ihr Profil-Gegenstück`
+> pinnt heute Gleichheit, weil die *zusammengesetzten* Bilder 1:1 aus dem Profil
+> stammen. Mit echten Zeichnungen ist er zu streng und gehört auf „Reihe ist
+> nicht leer und alle Bilder liegen im Atlas" gelockert.
 
 Für die **Rückansicht** ist im Renderer noch nichts vorgesehen: dort greift
 heute bewusst die verkürzte Silhouette, weil ein Gesicht beim Weglaufen falsch
