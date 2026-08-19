@@ -175,9 +175,12 @@ plus 7 kB CSS und 170 kB Grafik.
 
 Der **Quelltext** steht unter der [MIT-Lizenz](LICENSE).
 
-Die **Zeichnungen** nicht: alle Bilder zeigen Tyson und bleiben urheberrechtlich
-geschützt (© 2026 Martin Pfeffer, alle Rechte vorbehalten). Sie dürfen mit
-diesem Projekt weitergegeben, aber nicht getrennt davon verwertet oder in
-anderen Projekten eingesetzt werden. Wer den Code nachnutzen möchte, ersetzt
-sie durch eigene — die Pipeline in `tools/` baut den Atlas aus beliebigen
-4×4-Rasterblättern.
+Die **Zeichnungen** nicht — Bedingungen in [LICENSE-ARTWORK.md](LICENSE-ARTWORK.md):
+alle Bilder zeigen Tyson und bleiben urheberrechtlich geschützt (© 2026 Martin
+Pfeffer, alle Rechte vorbehalten). Sie dürfen mit diesem Projekt weitergegeben,
+aber nicht getrennt davon verwertet oder in anderen Projekten eingesetzt werden.
+Wer den Code nachnutzen möchte, ersetzt sie durch eigene — die Pipeline in
+`tools/` baut den Atlas aus beliebigen 4×4-Rasterblättern.
+
+> Die beiden Dateien sind bewusst getrennt: mit dem Bild-Anhang direkt in
+> `LICENSE` erkennt GitHub die MIT-Lizenz nicht mehr („not identifiable").
