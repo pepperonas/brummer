@@ -1,0 +1,53 @@
+MIT License
+
+Copyright (c) 2026 Martin Pfeffer
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+AUSNAHME: DIE ZEICHNUNGEN / EXCEPTION: THE ARTWORK
+
+Die MIT-Lizenz oben gilt für den QUELLTEXT.
+
+Sie gilt NICHT für die Zeichnungen des Hundes Tyson und die daraus erzeugten
+Grafiken, namentlich:
+
+    artwork/**                          (die acht Original-Blätter)
+    client/public/assets/atlas.png      (der daraus gepackte Sprite-Atlas)
+    client/public/og.png                (das Teilbild)
+    client/public/icon*.png, icon.svg   (die Symbole)
+    docs/*.png                          (die Bildschirmfotos)
+
+Diese Bilder sind urheberrechtlich geschützt, alle Rechte vorbehalten
+(© 2026 Martin Pfeffer). Sie dürfen zusammen mit diesem Projekt weitergegeben
+werden, aber nicht getrennt davon verwertet, verändert weiterverbreitet oder
+in anderen Projekten eingesetzt werden.
+
+Wer den Code nachnutzen möchte, ersetzt die Grafiken durch eigene: die
+Pipeline in tools/ erzeugt den Atlas aus beliebigen 4x4-Rasterblättern.
+
+---
+
+The MIT license above covers the SOURCE CODE only. It does NOT cover the
+drawings of the dog Tyson or artwork derived from them (see the file list
+above); those are © 2026 Martin Pfeffer, all rights reserved. They may be
+redistributed as part of this project, but not used, modified or redistributed
+separately, nor used in other projects. To reuse the code, replace the artwork
+with your own — the pipeline in tools/ builds the atlas from any 4x4 sheets.

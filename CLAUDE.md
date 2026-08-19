@@ -188,7 +188,7 @@ Zwischenframes unter `build/` nicht. Die Pipeline läuft also nur, wenn sich in
 ## Arbeiten
 
 ```bash
-cd server && npm test                                  # 41 Tests (node --test)
+cd server && npm test                                  # 61 Tests (node --test)
 cd client && npm test                                  # 15 Tests (Eingabe-Tor, Teilbild/Meta)
 cd server && node --test test/room.test.js             # eine Datei
 cd server && node --test --test-name-pattern 'Biss'    # einzelne Tests
@@ -197,9 +197,18 @@ cd client && npm run dev                               # Port 5180, leitet /api 
 ./deploy.sh                                            # beide Suiten -> Build -> rsync -> Neustart -> Probe
 ```
 
-**56 Tests**: Server 41 (`sim` 15 · `room` 19 · `db` 7), Client 15
-(`input` 7 · `meta` 8). Der Client testet mit einem **handgerollten
-DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei. Browser-Prüfungen
+**76 Tests**: Server 61 (`sim` 15 · `room` 19 · `db` 7 · `contract` 10 ·
+`verbs` 10), Client 15 (`input` 7 · `meta` 8). Der Client testet mit einem
+**handgerollten DOM-Ersatz** statt jsdom — das Repo bleibt abhängigkeitsfrei.
+
+⚠️ **`contract.test.js` pinnt die Stellen, die in ZWEI Dateien stehen** —
+Posen-Reihenfolge, Spaltenordnung des Schnappschusses, Code-Alphabet, und die
+hart notierte `2.0` in `net.js` gegen `DIG.time`. Er liest beide Seiten aus dem
+**Quelltext** aus; die erste Fassung verglich net.js nur gegen eine von Hand
+getippte Liste und blieb bei einer in room.js eingeschobenen Spalte **grün** —
+aufgefallen ist das erst durch die Mutationsprobe. Zweite Lehre aus derselben
+Runde: eine `sed`-Mutation, die Definition *und* Verwendung umbenennt, ist ein
+No-op und beweist gar nichts; Mutationen müssen **Werte** ändern. Browser-Prüfungen
 laufen von Hand: `window.__br` gibt Zugriff auf `net`, `renderer` und `input` —
 darüber wurden Drift, Kamera, Ereignisse und das Eingabe-Tor gemessen.
 
