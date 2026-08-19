@@ -1,8 +1,9 @@
 # Umzug Beißfest → Brummer
 
-Stand 2026-08-19. Ordner, Repo-Inhalt und alle Dateien sind bereits umgestellt;
-**auf dem VPS läuft noch der alte Stand.** Diese Liste stellt ihn um. Jeder
-Schritt ist einzeln prüfbar — nicht blind durchlaufen lassen.
+**Ausgeführt am 2026-08-19.** Diese Liste ist damit Protokoll, nicht mehr
+Anleitung — sie bleibt als Beleg und als Vorlage für den nächsten Umzug stehen.
+Was beim echten Lauf anders war als geplant, steht unten unter
+„Abweichungen beim Lauf".
 
 Ausgangslage live: Dienst `beissfest`, User `beissfest`, `/opt/beissfest`,
 DB `/opt/beissfest/data/beissfest.db`, vhost + Zertifikat `beissfest.celox.io`,
@@ -130,6 +131,54 @@ danach `/api/leaderboard` erneut — die Punkte müssen gestiegen sein.
 `/opt/beissfest`, `/var/backups/beissfest`, die alten Unit-Dateien und der
 Benutzer `beissfest`. Solange sie liegen, ist ein Rückzug möglich: alten Dienst
 starten, neuen stoppen, vhosts tauschen.
+
+---
+
+## Abweichungen beim Lauf (2026-08-19)
+
+Zwei Punkte stimmten nicht mit der Wirklichkeit überein.
+
+**1. Der alte Name hat keinen DNS-Eintrag mehr — Schritt 7/8 (301) entfiel.**
+Der Hostinger-Record wurde offenbar *umbenannt* statt dupliziert:
+`brummer.celox.io` löste schon vor Beginn auf 69.62.121.168 auf, während
+`beissfest.celox.io` bei den autoritativen Nameservern (`ns1.dns-parking.com`)
+**gar keinen A-Record** mehr hat. Ein 301 dort wäre für niemanden erreichbar,
+also wurde er weggelassen; der alte vhost bleibt vorerst nur als Rollback
+stehen. Folge: alte Lesezeichen laufen in NXDOMAIN statt auf die neue Adresse.
+Wer das nachholen will, braucht **erst wieder einen A-Record**, dann den 301.
+
+Nebenwirkung: das Zertifikat `beissfest.celox.io` (gültig bis **16.11.2026**)
+kann sich ohne DNS nicht mehr per HTTP-01 erneuern. Kein Schaden, aber es wird
+ab Mitte Oktober Erneuerungsfehler protokollieren — spätestens dann §9.
+
+**2. `systemctl enable` startet einen Timer nicht.** Schritt 5 armiert
+`brummer-backup.timer` nur für den nächsten Boot; `systemctl list-timers` zeigte
+ihn danach nicht. Ohne ein zusätzliches
+
+```bash
+systemctl start brummer-backup.timer
+```
+
+wäre die erste nächtliche Sicherung stillschweigend ausgefallen. Der Lauf wurde
+danach einmal von Hand ausgelöst und die Sicherung nachweislich erzeugt
+(`/var/backups/brummer/brummer-2026-08-19.db.gz`, Integritätsprüfung im Skript).
+
+**Nicht abgewichen, aber bestätigt:** die Haupt-DB war 4 KB groß, der WAL
+383 KB — ein `cp` hätte eine praktisch leere Datenbank kopiert. `.backup` hat
+alle 5 Spieler und 16 Runden übernommen, `integrity_check` = ok.
+
+### Belege der Abnahme
+
+* `/api/health` → `{"ok":true,...}`, `/api/leaderboard` trägt die alten Stände
+  (RundenTest 23, Tyson 20).
+* WebSocket über nginx: `hello` + `meta` (3 Bots aufgefüllt), **180
+  Schnappschüsse in 6 s = exakt 30 Hz**, rtt 27 ms.
+* Browser: Menü sichtbar, Rundenende-Overlay korrekt verborgen, Kamera endlich
+  (x 538,8 · y 625 · zoom 1,114 — kein NaN), Canvas auf 1200×863 vermessen,
+  Phase `play`, 8 Knochen / 5 Depots, **0 Konsolenfehler**.
+* Kopfzeilen: `index.html` `no-cache`, gehashtes Bundle `immutable`.
+* Die beiden Probe-Konten (`DeployProbe`, `Tyson/XV9ZBR`) wurden danach wieder
+  aus `players` entfernt — die Bestenliste steht unverändert bei 5 Einträgen.
 
 ---
 

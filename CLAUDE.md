@@ -8,13 +8,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 des Hundes Tyson. Live: https://brummer.celox.io · Repo: `pepperonas/brummer`
 (öffentlich). VPS `69.62.121.168`, systemd `brummer`, **Port 4263** (loopback).
 
-⚠️ **Umbenannt am 2026-08-19** (vorher „Beißfest", `beissfest.celox.io`). Ordner,
-Repo-Inhalt und alle Dateien tragen den neuen Namen — **auf dem VPS läuft noch
-der alte Stand**. `deploy.sh` zeigt bereits auf `/opt/brummer` und
-`brummer.celox.io` und läuft deshalb ins Leere, bis die Umstellung erledigt ist:
-Schritt für Schritt in **`MIGRATION.md`** (GitHub-Repo, DNS, Zertifikat,
-Datenbank-Übernahme, 301 vom alten Host). Port 4263 tragen beide Dienste — der
-alte muss weg, bevor der neue bindet.
+**Umbenannt am 2026-08-19** (vorher „Beißfest", `beissfest.celox.io`) — die
+Umstellung ist **vollzogen**: Repo, DNS, Zertifikat, Dienst, Datenbank und
+Sicherungstimer laufen unter dem neuen Namen, der alte Dienst ist gestoppt und
+`disable`d. Der Weg dahin steht in **`MIGRATION.md`**.
+
+⚠️ **Der alte Name ist NICHT umgeleitet, sondern weg.** Der DNS-Eintrag
+`beissfest.celox.io` wurde umbenannt statt dupliziert, hat also **keinen
+A-Record mehr**; der geplante 301 wäre unerreichbar und ist deshalb entfallen.
+Alte Lesezeichen laufen in NXDOMAIN. Wer sie einfangen will, braucht **zuerst
+wieder einen A-Record** — dann erst lohnt der Redirect.
+
+⚠️ **Rollback steht noch:** `/opt/beissfest`, `/var/backups/beissfest`, der alte
+vhost samt Zertifikat und der Benutzer `beissfest`. Solange sie liegen, ist ein
+Rückzug möglich. Das alte Zertifikat läuft am **16.11.2026** ab und kann sich
+mangels DNS nicht mehr erneuern — spätestens dann aufräumen (MIGRATION.md §9).
 
 ## Aufbau in einem Satz
 
