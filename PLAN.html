@@ -530,6 +530,26 @@
     </div>
   </header>
 
+  <section style="padding-top:2.2rem">
+    <div class="col">
+      <div class="note">
+        <p class="eyebrow">Stand 19. August 2026 — umgesetzt</p>
+        <p>Der Plan ist gebaut und läuft: <a href="https://beissfest.celox.io">beissfest.celox.io</a>,
+        Quelltext offen unter <a href="https://github.com/pepperonas/beissfest">github.com/pepperonas/beissfest</a>.
+        Drei Dinge kamen anders als hier vorgezeichnet, jeweils aus einem Grund, der erst beim Bauen sichtbar wurde:</p>
+        <p><strong>Kein Phaser.</strong> Das Framework wöge 1,3 MB und würde nur als Atlas-Loader gebraucht —
+        Tiefensortierung, 2,5-D-Projektion und Animation sind ohnehin selbst geschrieben. Der Client wiegt jetzt
+        <strong>23 kB</strong> statt anderthalb Megabyte.</p>
+        <p><strong>Es gibt doch einen echten Laufzyklus.</strong> Die Vermutung „Posen, keine Zyklen“ stimmte nur halb.
+        Misst man die Rückenhöhe über der Bodenlinie, zerfallen die Zeichnungen in zwei saubere Gangarten —
+        aufrecht und geduckt. Getrennt ergeben sie einen <strong>5-Frame-Laufzyklus mit 3 px Streuung</strong> und
+        einen Schleichgang, der jetzt das Tragen darstellt. Zwischenbilder erzeugen zu lassen war nicht nötig.</p>
+        <p><strong>Bots von Anfang an.</strong> Im Plan nicht vorgesehen, aber ein Arena-Spiel ohne Mitspieler ist tot.
+        Sie erzeugen nur Eingaben und laufen durch dieselbe Simulation wie Menschen.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- ============ 1. Bestand ============ -->
   <section>
     <div class="sec-head col">
