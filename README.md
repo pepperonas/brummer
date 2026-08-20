@@ -10,7 +10,7 @@
   <img alt="Tests" src="https://img.shields.io/badge/Tests-137%20gr%C3%BCn-8fcba4?style=flat-square&labelColor=131815">
   <img alt="Node" src="https://img.shields.io/badge/Node-%E2%89%A5%2020-5FA04E?style=flat-square&labelColor=131815&logo=nodedotjs&logoColor=5FA04E">
   <img alt="Abhängigkeiten" src="https://img.shields.io/badge/Laufzeit--Abh%C3%A4ngigkeiten-2%20Server%20%C2%B7%200%20Client-8fcba4?style=flat-square&labelColor=131815">
-  <img alt="Bundle" src="https://img.shields.io/badge/Client-11%2C3%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
+  <img alt="Bundle" src="https://img.shields.io/badge/Client-11%2C5%20kB%20gzip-8fcba4?style=flat-square&labelColor=131815">
 </p>
 <p>
   <img alt="Netzcode" src="https://img.shields.io/badge/Netzcode-30%20Hz%20autoritativ-c08b5c?style=flat-square&labelColor=131815">
@@ -182,13 +182,14 @@ Wie das Blatt entstanden ist — Prompt, Vorgaben und der Weg ins Spiel — steh
 **[`docs/neue-sprites.md`](docs/neue-sprites.md)**.
 
 **Der Atlas ist ohne Dithering quantisiert.** Bei 220 Farben ist kein Unterschied
-zu sehen, die Datei aber ein Viertel so groß (709 → 170 kB). *Mit* Dithering
-rauscht das schwarze Fell sichtbar.
+zu sehen, die Datei aber rund ein Viertel so groß (damals gemessen 709 → 170 kB;
+heute 223 kB bei 32 Bildern, seit die Front- und Rückansichten dazugekommen
+sind). *Mit* Dithering rauscht das schwarze Fell sichtbar.
 
 **Kein Spiel-Framework.** Phaser wiegt ~1,3 MB, gebraucht würde davon der
 Atlas-Loader. Tiefensortierung, 2,5-D-Projektion und Animation sind ohnehin
-selbst geschrieben. Der gesamte Client wiegt **29 kB JavaScript** (11,3 kB gzip)
-plus 8 kB CSS und 170 kB Grafik.
+selbst geschrieben. Der gesamte Client wiegt **29 kB JavaScript** (11,5 kB gzip)
+plus 8 kB CSS und 223 kB Grafik.
 
 ## Lizenz
 

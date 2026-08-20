@@ -35,9 +35,11 @@ certbot certonly --nginx -d brummer.celox.io
 ./deploy.sh
 ```
 
-Das Skript baut den Client, spiegelt `server/`, `shared/` und den Build, laesst
-`npm install --omit=dev` laufen (better-sqlite3 wird nativ gebaut) und startet
-den Dienst neu.
+Das Skript faehrt zuerst **beide Testsuiten** (Server und Client -- ein Deploy
+mit roten Tests soll gar nicht erst anlaufen), baut dann den Client, spiegelt
+`server/`, `shared/` und den Build, laesst `npm install --omit=dev` laufen
+(better-sqlite3 wird nativ gebaut), startet den Dienst neu und prueft
+`/api/health`, bis er antwortet.
 
 ## Nachsehen
 
