@@ -126,11 +126,41 @@ curl -sI https://beissfest.celox.io/ | head -3       # 301 auf brummer
 Dazu einmal im Browser: Runde starten, Knochen abliefern, Rundenende abwarten,
 danach `/api/leaderboard` erneut — die Punkte müssen gestiegen sein.
 
-## 9. Aufräumen (frühestens nach ein paar Tagen)
+## 9. Aufräumen — ERLEDIGT am 2026-08-21
 
-`/opt/beissfest`, `/var/backups/beissfest`, die alten Unit-Dateien und der
-Benutzer `beissfest`. Solange sie liegen, ist ein Rückzug möglich: alten Dienst
-starten, neuen stoppen, vhosts tauschen.
+Der Rollback ist abgebaut, ein Rückzug auf `beissfest` ist ab jetzt **nicht mehr
+möglich**. Entfernt wurden:
+
+- `/opt/beissfest` (15 MB) und `/var/backups/beissfest`
+- die Units `beissfest.service`, `beissfest-backup.{service,timer}` + `daemon-reload`
+- vhost `beissfest.celox.io` (sites-available + sites-enabled), `nginx -t` + reload
+- das Let's-Encrypt-Zertifikat (`certbot delete`, live/archive/renewal)
+- der Systembenutzer `beissfest` (uid 116) samt Gruppe
+
+**Vor dem Löschen wurde die Datenübernahme geprüft**, nicht angenommen: die alte
+DB hielt 5 Spieler und 16 Runden, die neue 13 und 40. Alle 5 alten Spielercodes
+stehen mit identischen Werten (games/wins/score) in `brummer.db`, und die 16
+alten Runden sind zeilenweise bit-identisch (gleicher md5 über das Dump-Ergebnis).
+In der alten DB stand also nichts Eigenes.
+
+⚠️ **Beim Prüfen der Spieler nicht über `id` gehen** — der Primärschlüssel heißt
+`code`. Ein `select id from players` scheitert, und wenn man das Ergebnis mit
+`comm` gegen ein zweites ebenso gescheitertes Ergebnis hält, vergleicht man zwei
+leere Listen und bekommt ein falsches „keine Abweichung".
+
+⚠️ **`pgrep -f`/`pkill -f` finden sich selbst.** Ein Warte-Skript, das mit
+`pgrep -f "certbot -q renew"` auf das Ende des Renewal-Laufs lauert, matcht jede
+andere Shell, deren *Kommandozeile* diese Zeichenkette enthält — also auch einen
+zweiten Warter und die eigene `bash -c`-Hülle. Hier warteten dadurch zwei
+Prozesse gegenseitig aufeinander, und ein `pkill -f <skriptname>` erlegte die
+eigene SSH-Sitzung (Exit 255). Bei solchen Wächtern über **PID** arbeiten oder
+mit `pgrep -x` auf den Programmnamen.
+
+Nebenbefund, unabhängig von dieser Migration: `certbot.service` steht auf
+`failed`, aber wegen `hus-vorschau.celox.io` („Some challenges have failed",
+zuletzt 2026-08-20 16:00 und 2026-08-21 02:13). Das beissfest-Zertifikat war an
+den Fehlschlägen nie beteiligt — es hatte noch 87 Tage Restlaufzeit und stand
+damit gar nicht zur Erneuerung an.
 
 ---
 
@@ -148,8 +178,9 @@ stehen. Folge: alte Lesezeichen laufen in NXDOMAIN statt auf die neue Adresse.
 Wer das nachholen will, braucht **erst wieder einen A-Record**, dann den 301.
 
 Nebenwirkung: das Zertifikat `beissfest.celox.io` (gültig bis **16.11.2026**)
-kann sich ohne DNS nicht mehr per HTTP-01 erneuern. Kein Schaden, aber es wird
-ab Mitte Oktober Erneuerungsfehler protokollieren — spätestens dann §9.
+konnte sich ohne DNS nicht mehr per HTTP-01 erneuern. Kein Schaden — und es kam
+nie zu den erwarteten Erneuerungsfehlern, weil §9 am 2026-08-21 vorgezogen
+wurde und das Zertifikat mitgenommen hat.
 
 **2. `systemctl enable` startet einen Timer nicht.** Schritt 5 armiert
 `brummer-backup.timer` nur für den nächsten Boot; `systemctl list-timers` zeigte
